@@ -11,6 +11,8 @@ const SWING_DURATION = 0.22; // detik
 const BASE_POS_X = 0.3;
 const BASE_POS_Y = -0.3;
 const BASE_POS_Z = -0.55;
+/** Geser seluruh pasangan lengan secara horizontal (negatif = ke kiri). */
+const GROUP_OFFSET_X = -0.06;
 
 export interface FirstPersonArmsHandle {
   /** Child dari camera. */
@@ -36,6 +38,7 @@ function armMesh(color: number): Mesh {
  */
 export function createFirstPersonArms(): FirstPersonArmsHandle {
   const group = new Group();
+  group.position.x = GROUP_OFFSET_X;
 
   const skin = 0xd7a558;
   const shirt = 0x2b6cd4;

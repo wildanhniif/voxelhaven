@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [M6.4.1] — Pasangan lengan FPP di tengah, tetap renggang
+Tanggal: 2026-11-11
+
+### Selesai
+- Jarak lengan kiri-kanan dikembalikan seperti semula (BASE_POS_X 0.3, renggang, tidak nyambung).
+- Seluruh pasangan lengan digeser horizontal GROUP_OFFSET_X -0.06: posisi di tengah layar, sedikit ke kiri.
+
 ## [M6.4] — Lengan FPP terpisah, badan disembunyikan
 Tanggal: 2026-11-11
 
