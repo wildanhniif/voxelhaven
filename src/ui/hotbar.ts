@@ -24,6 +24,7 @@ function blockIcon(type: number): string {
  * Hotbar 9 slot di bawah layar (DOM overlay).
  * Highlight slot aktif + nama blok aktif sebagai label.
  * Ikon slot = render isometric blok (top + 2 sisi), pixelated tanpa smoothing.
+ * Badge jumlah (pojok kanan bawah slot); slot kosong gelap.
  */
 export function createHotbar(onSlotSelected: (index: number) => void): HotbarHandle {
   const root = document.createElement('div');
@@ -37,11 +38,12 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
   const cells: HTMLElement[] = [];
   const swatches: HTMLElement[] = [];
   const numbers: HTMLElement[] = [];
+  const badges: HTMLElement[] = [];
 
   for (let i = 0; i < 9; i++) {
     const cell = document.createElement('div');
     cell.style.cssText =
-      'width:40px;height:40px;box-sizing:border-box;border:2px solid rgba(255,255,255,0.35);display:flex;align-items:center;justify-content:center;font:12px monospace;color:#fff;cursor:pointer;';
+      'width:40px;height:40px;box-sizing:border-box;border:2px solid rgba(255,255,255,0.35);display:flex;align-items:center;justify-content:center;font:12px monospace;color:#fff;cursor:pointer;position:relative;';
 
     // Nomor slot: label terpisah supaya tidak menimpa swatch.
     const number = document.createElement('span');
@@ -54,10 +56,17 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
       'width:28px;height:28px;display:none;background-size:contain;background-position:center;background-repeat:no-repeat;image-rendering:pixelated;';
     cell.appendChild(swatch);
 
+    // Badge jumlah (pojok kanan bawah slot).
+    const badge = document.createElement('span');
+    badge.style.cssText =
+      'position:absolute;right:2px;bottom:0;font:11px monospace;color:#fff;text-shadow:0 1px 2px #000;';
+    cell.appendChild(badge);
+
     cell.addEventListener('click', () => onSlotSelected(i));
     cells.push(cell);
     swatches.push(swatch);
     numbers.push(number);
+    badges.push(badge);
     root.appendChild(cell);
   }
 
@@ -70,20 +79,26 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
         const cell = cells[i]!;
         const swatch = swatches[i]!;
         const number = numbers[i]!;
-        const type = inv.slots[i] ?? null;
+        const badge = badges[i]!;
+        const slot = inv.slots[i];
         cell.style.borderColor = i === inv.active ? '#ffffff' : 'rgba(255,255,255,0.35)';
         cell.style.background = i === inv.active ? 'rgba(255,255,255,0.22)' : 'transparent';
-        if (type === null) {
+        if (slot === undefined || slot === null || slot.count <= 0) {
           swatch.style.display = 'none';
           number.style.display = 'block';
+          badge.textContent = '';
+          // Slot kosong = gelap (no item).
+          cell.style.filter = 'brightness(0.5)';
         } else {
+          cell.style.filter = 'brightness(1)';
           swatch.style.display = 'block';
-          swatch.style.backgroundImage = `url(${blockIcon(type)})`;
+          swatch.style.backgroundImage = `url(${blockIcon(slot.type)})`;
           number.style.display = 'none';
+          badge.textContent = String(slot.count);
         }
       }
-      const active = inv.slots[inv.active] ?? null;
-      label.textContent = active === null ? 'Slot kosong' : (BLOCK_NAMES[active] ?? 'Unknown');
+      const active = inv.slots[inv.active];
+      label.textContent = active === undefined || active === null || active.count <= 0 ? 'Slot kosong' : (BLOCK_NAMES[active.type] ?? 'Unknown');
     },
     dispose() {
       root.remove();

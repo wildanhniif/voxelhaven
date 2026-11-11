@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## [M6.5] — Item drops & inventory count
+Tanggal: 2026-11-11
+
+### Selesai
+- src/state/inventory.ts: slot jadi stack { type, count } (maks 64). API baru: addItem, removeItem, getCount. Modal awal slot 0-2 penuh (grass/dirt/stone).
+- src/entity/item-drop.ts (baru): entity item drop — kotak 0.25 warna blok, gravitasi, putar + bobbing, pickup radius 1.2 blok via callback tryPickup (inventory penuh → item tetap di tanah).
+- main.ts: breakAtCursor spawn drop; placeAtCursor cek getCount > 0 lalu removeItem; loop update drops tiap frame.
+- src/ui/hotbar.ts: badge jumlah di pojok kanan bawah tiap slot; slot kosong/count-0 gelap (brightness 0.5).
+- tests/unit/inventory-count.test.ts (6 test); tests/unit/inventory.test.ts disesuaikan ke API stack. Total 67 test.
+- README: kontrol + mekanik item drop.
+
+### Yang BELUM / tidak dikerjakan
+- Drag & drop inventory, stack menyebar otomatis (by design: item hangus kalau penuh).
+- Item drop tidak di-persist ke localStorage (hilang saat refresh).
+
+### Risiko / Tech Debt
+- Item drop yang tidak pernah di-pickup menumpuk tanpa GC; kalau jadi lag perlu despawn timer.
+- Pickup pakai jarak euclidean pusat-ke-pusat (bukan AABB); cukup untuk sekarang.
+
+### Cara Verifikasi Manual
+1. Klik kiri blok → muncul item kecil di tanah, muter + bobbing.
+2. Dekati item → hilang, count slot di hotbar +1.
+3. Klik kanan → count berkurang; count 0 → tidak bisa taruh, slot gelap.
+4. Break 65+ blok sejenis tanpa pickup tidak mungkin melebihi 64/slot — kelebihan masuk slot baru.
+
 ## [M6.4.1] — Pasangan lengan FPP di tengah, tetap renggang
 Tanggal: 2026-11-11
 

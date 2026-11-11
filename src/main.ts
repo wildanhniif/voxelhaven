@@ -4,8 +4,9 @@ import { startLoop } from './engine/loop';
 import { createDebugOverlay } from './ui/debug-overlay';
 import { createHotbar } from './ui/hotbar';
 import { createBlockStore } from './state/block-store';
-import { createInventory, getActiveBlock, selectSlot, type Inventory } from './state/inventory';
+import { createInventory, getActiveBlock, getCount, addItem, removeItem, selectSlot, type Inventory } from './state/inventory';
 import { breakBlock, placeBlock, type PlayerBounds } from './world/block-edit';
+import { createItemDrops } from './entity/item-drop';
 import { ChunkManager } from './world/chunk-manager';
 import { buildChunkGeometry } from './world/mesher';
 import { createTextureAtlas } from './world/texture-atlas';
@@ -132,6 +133,9 @@ camera.add(fppArms.group);
 scene.add(camera);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
 
+const itemDrops = createItemDrops();
+scene.add(itemDrops.group);
+
 let inventory: Inventory = createInventory();
 let target: Vec3 | null = null;
 let heldButton = -1;
@@ -172,20 +176,26 @@ function raycastFromCamera(): Vec3 | null {
 
 function breakAtCursor(): void {
   const { hit } = raycastFromEye();
-  if (hit !== null && breakBlock(hit.block, chunkManager)) {
-    remeshAround(hit.block[0], hit.block[2]);
-  }
+  if (hit === null) return;
+  const type = chunkManager.getBlock(hit.block);
+  if (!breakBlock(hit.block, chunkManager)) return;
+  remeshAround(hit.block[0], hit.block[2]);
+  // Blok pecah jadi item fisik di pusat bloknya.
+  itemDrops.spawn(type, hit.block[0] + 0.5, hit.block[1] + 0.5, hit.block[2] + 0.5);
 }
 
 function placeAtCursor(): void {
-  // Slot kosong → tidak menaruh apa pun.
+  // Slot kosong atau stok habis → tidak menaruh apa pun.
   const block = getActiveBlock(inventory);
   if (block === null) return;
+  if (getCount(inventory, block) <= 0) return;
   if (target === null) return;
   if (placeBlock(target, block, chunkManager, playerBounds())) {
+    inventory = removeItem(inventory, block);
     remeshAround(target[0], target[2]);
   }
 }
+
 
 /** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
 function performAction(button: number): void {
@@ -276,8 +286,13 @@ const loop = startLoop(({ elapsed, delta }) => {
   const moving = fpsCamera.isLocked && (body.vx !== 0 || body.vz !== 0);
   playerModel.animate(delta / 1000, moving);
   fppArms.update(delta / 1000, moving, fpsCamera.pitch, fpsCamera.yaw);
-
-
+  // Pickup item: inventory penuh → tryPickup false → item tetap di tanah.
+  itemDrops.update(delta / 1000, body, chunkManager, (type) => {
+    const next = addItem(inventory, type);
+    if (next === inventory) return false; // penuh, diabaikan
+    inventory = next;
+    return true;
+  });
   hotbar.update(inventory);
   renderer.render(scene, camera);
   onFps(elapsed);
@@ -300,6 +315,7 @@ window.addEventListener('beforeunload', () => {
   loop();
   controller.dispose();
   fpsCamera.dispose();
+  itemDrops.dispose();
   playerModel.dispose();
   document.removeEventListener('mousedown', onMouseDown);
   document.removeEventListener('mouseup', onMouseUp);
