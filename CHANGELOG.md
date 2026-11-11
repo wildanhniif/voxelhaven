@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [M6.2.2] — Fix pivot tangan FPP (kayak patah)
+Tanggal: 2026-11-11
+
+### Selesai
+- src/player/viewmodel.ts: mesh lengan kini di-offset dari pivot (0.6 unit ke depan) sehingga ayunan berporos di bahu/siku, bukan tengah lengan; bobbing juga ada sway horizontal halus.
+
+### Cara Verifikasi Manual
+1. FPP: jalan + klik: tangan bobbing dan berayun al dari ujung, bukan tampak terlipat di tengah.
+
 ## [M6.2.1] — Fix animasi tangan + animasi jalan TPP + wajah
 Tanggal: 2026-11-11
 

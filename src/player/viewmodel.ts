@@ -1,7 +1,7 @@
-import { BoxGeometry, Group, Mesh, MeshLambertMaterial } from 'three';
+import { BoxGeometry, Group, Mesh, MeshLambertMaterial, Vector3 } from 'three';
 
 const SWING_DURATION = 0.25; // detik
-const BASE_Y = -0.3;
+const BASE_POS = new Vector3(0.35, -0.3, -0.5);
 
 export interface ViewModelHandle {
   /** Ditambahkan sebagai child kamera (scene.add(camera) di caller). */
@@ -14,20 +14,24 @@ export interface ViewModelHandle {
 }
 
 /**
- * Tangan FPP sederhana di pojok kanan bawah layar.
- * Idle bobbing saat player bergerak; swing saat aksi blok.
+ * Tangan FPP di pojok kanan bawah layar.
+ * Mesh lengan digeser supaya pivot rotasi di ujung belakang (bahu),
+ * bukan di tengah kotak, biar ayunannya kayak siku, bukan patah.
  */
 export function createViewModel(): ViewModelHandle {
   const group = new Group();
+  group.position.copy(BASE_POS);
+  group.rotation.set(0, -0.2, 0);
+
+  const pivot = new Group();
   const arm = new Mesh(
-    new BoxGeometry(0.25, 0.25, 0.7),
+    new BoxGeometry(0.22, 0.22, 0.6),
     new MeshLambertMaterial({ color: 0xd7a558 }),
   );
-  const baseRot = -0.15;
-  arm.rotation.set(baseRot, 0, 0);
-  group.add(arm);
-  group.position.set(0.35, BASE_Y, -0.5);
-  group.rotation.set(0, -0.2, 0);
+  arm.position.z = -0.3; // lengan menjulur ke depan dari pivot
+  pivot.add(arm);
+  pivot.rotation.x = -0.15;
+  group.add(pivot);
 
   let elapsed = 0;
   let swingT = -1; // -1 = idle, 0..1 = sedang mengayun
@@ -39,14 +43,15 @@ export function createViewModel(): ViewModelHandle {
     },
     update(delta, moving) {
       elapsed += delta;
-      const bobY = moving ? Math.sin(elapsed * 8) * 0.015 : 0;
-      group.position.y = BASE_Y + bobY;
+      const bob = Math.sin(elapsed * 8);
+      group.position.y = BASE_POS.y + (moving ? bob * 0.015 : 0);
+      group.position.x = BASE_POS.x + (moving ? Math.cos(elapsed * 4) * 0.01 : 0);
       if (swingT >= 0) {
         swingT += delta / SWING_DURATION;
         if (swingT > 1) swingT = -1;
       }
       const swing = swingT < 0 ? 0 : Math.sin(swingT * Math.PI);
-      arm.rotation.x = baseRot - swing * 0.8;
+      pivot.rotation.x = -0.15 - swing * 0.8;
     },
     dispose() {
       arm.geometry.dispose();
