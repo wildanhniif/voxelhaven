@@ -8,6 +8,7 @@ export interface ViewModelHandle {
   readonly group: Group;
   /** Picu animasi ayun (klik kiri/kanan). */
   swing(): void;
+  /** delta dalam DETIK (konsisten dengan unit animasi). */
   update(delta: number, moving: boolean): void;
   dispose(): void;
 }

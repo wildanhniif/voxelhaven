@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [M6.2.1] — Fix animasi tangan + animasi jalan TPP + wajah
+Tanggal: 2026-11-11
+
+### Selesai
+- Bug fix: viewmodel.update sebelumnya menerima delta dalam ms dari loop, tetapi animasi memakai detik: swing selesai dalam 1 frame (tak terlihat) dan bobbing aliasing. Kini delta dikonversi ke detik di main.ts.
+- src/player/player-model.ts: animasi jalan (kaki + tangan berayun bergantian, pivot di panggul/bahu), swing tangan kanan saat aksi blok, mata hitam di depan kepala (wajah terlihat).
+- src/main.ts: performAction memicu swing player model; loop memanggil playerModel.animate tiap frame.
+
+### Risiko / Tech Debt
+- Animasi jalan sederhana (sinus), belum ada animasi idle/transisi berhenti.
+
+### Cara Verifikasi Manual
+1. FPP: klik kiri/kanan: tangan berayun; jalan: tangan bobbing.
+2. F5 ke TPP: jalan: kaki+tangan berayun; klik: tangan kanan mengayun; mata terlihat di depan kepala.
+
 ## [M6.2] — Viewmodel & Third-Person Camera (TPP)
 Tanggal: 2026-11-11
 

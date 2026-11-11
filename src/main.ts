@@ -186,6 +186,7 @@ function placeAtCursor(): void {
 /** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
 function performAction(button: number): void {
   viewmodel.swing();
+  playerModel.swing();
   if (button === 0) breakAtCursor();
   else if (button === 2) placeAtCursor();
 }
@@ -266,8 +267,11 @@ const loop = startLoop(({ elapsed, delta }) => {
     highlight.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
   }
   updateHeldAction(performance.now());
+  // Loop memberi delta dalam ms; viewmodel & animasi pakai detik.
   const moving = fpsCamera.isLocked && (body.vx !== 0 || body.vz !== 0);
-  viewmodel.update(delta, moving);
+  viewmodel.update(delta / 1000, moving);
+  playerModel.animate(delta / 1000, moving);
+
 
   hotbar.update(inventory);
   renderer.render(scene, camera);
