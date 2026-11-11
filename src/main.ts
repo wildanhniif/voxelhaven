@@ -5,13 +5,14 @@ import { createDebugOverlay } from './ui/debug-overlay';
 import { createHotbar } from './ui/hotbar';
 import { createInventory, getActiveBlock, selectSlot, type Inventory } from './state/inventory';
 import { breakBlock, placeBlock, type PlayerBounds } from './world/block-edit';
-import { generateFlatChunk } from './world/chunk';
+import { ChunkManager } from './world/chunk-manager';
 import { buildChunkGeometry } from './world/mesher';
+import { CHUNK_SIZE, DEFAULT_TERRAIN, worldToChunk, type Chunk } from './world/terrain';
 import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { createController, EYE_HEIGHT } from './player/controller';
 import { raycastVoxel, type Vec3 } from './player/raycast';
 
-const SPAWN = { x: 16, y: 4, z: 16 } as const;
+const SPAWN_XZ = { x: 8, z: 8 } as const;
 const REACH = 6;
 /** Aksi pertama instan; repeat hanya saat tombol ditahan (Minecraft: ~4 blok/detik). */
 const REPEAT_INTERVAL_MS = 200;
@@ -22,18 +23,85 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 40, 130);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 300);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 400);
 
-const chunk = generateFlatChunk();
 const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-const worldMesh = new THREE.Mesh(buildChunkGeometry(chunk), material);
-scene.add(worldMesh);
+const chunkGroup = new THREE.Group();
+scene.add(chunkGroup);
+const chunkMeshes = new Map<string, THREE.Mesh>();
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 1.2));
 const sun = new THREE.DirectionalLight(0xffffff, 0.8);
 sun.position.set(1, 2, 0.5);
 scene.add(sun);
+
+const chunkManager = new ChunkManager(
+  DEFAULT_TERRAIN,
+  (chunk) => buildMesh(chunk),
+  (chunk) => removeMesh(chunk),
+);
+
+function chunkKey(chunk: Chunk): string {
+  return chunk.cx + ',' + chunk.cz;
+}
+
+function buildMesh(chunk: Chunk): void {
+  const key = chunkKey(chunk);
+  const existing = chunkMeshes.get(key);
+  if (existing !== undefined) {
+    existing.geometry.dispose();
+    chunkGroup.remove(existing);
+    chunkMeshes.delete(key);
+  }
+  const mesh = new THREE.Mesh(buildChunkGeometry(chunk), material);
+  mesh.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
+  chunkMeshes.set(key, mesh);
+  chunkGroup.add(mesh);
+}
+
+function removeMesh(chunk: Chunk): void {
+  const key = chunkKey(chunk);
+  const mesh = chunkMeshes.get(key);
+  if (mesh === undefined) return;
+  mesh.geometry.dispose();
+  chunkGroup.remove(mesh);
+  chunkMeshes.delete(key);
+}
+
+/** Edit blok: rebuild mesh chunk yang berubah + tetangga yang ada (culling tepi). */
+function remeshAround(x: number, z: number): void {
+  const { cx, cz } = worldToChunk(x, z);
+  const candidates: [number, number][] = [
+    [cx, cz],
+    [cx + 1, cz],
+    [cx - 1, cz],
+    [cx, cz + 1],
+    [cx, cz - 1],
+  ];
+  for (const [nx, nz] of candidates) {
+    const centerX = nx * CHUNK_SIZE + CHUNK_SIZE / 2;
+    const centerZ = nz * CHUNK_SIZE + CHUNK_SIZE / 2;
+    const chunk = chunkManager.chunkAt(centerX, centerZ);
+    if (chunk !== null) buildMesh(chunk);
+  }
+}
+
+// Spawn: tinggi permukaan di kolom spawn (chunk dijamin dimuat dulu).
+function findSpawnY(): number {
+  for (let i = 0; i < 40; i++) {
+    if (chunkManager.chunkAt(SPAWN_XZ.x, SPAWN_XZ.z) !== null) break;
+    chunkManager.update(SPAWN_XZ.x, SPAWN_XZ.z);
+  }
+  for (let y = CHUNK_SIZE - 1; y >= 0; y--) {
+    if (chunkManager.getBlock([SPAWN_XZ.x, y, SPAWN_XZ.z]) !== 0) return y + 1;
+  }
+  return CHUNK_SIZE;
+}
+
+const body = createPlayerBody(SPAWN_XZ.x + 0.5, findSpawnY(), SPAWN_XZ.z + 0.5);
+const spawn = { x: body.x, y: body.y, z: body.z };
 
 // Scratch vector: raycast & highlight tiap frame tanpa alokasi baru.
 const dirScratch = new THREE.Vector3();
@@ -45,7 +113,6 @@ highlight.visible = false;
 scene.add(highlight);
 
 const fpsCamera = createFpsCamera(camera, renderer.domElement);
-const body = createPlayerBody(SPAWN.x, SPAWN.y, SPAWN.z);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
 
 let inventory: Inventory = createInventory();
@@ -67,15 +134,9 @@ function raycastFromCamera(): Vec3 | null {
     [camera.position.x, camera.position.y, camera.position.z],
     [dirScratch.x, dirScratch.y, dirScratch.z],
     REACH,
-    chunk,
+    chunkManager,
   );
   return hit === null ? null : hit.adjacent;
-}
-
-// Satu edit = rebuild seluruh mesh chunk; cukup untuk skala 1 chunk.
-function rebuildWorld(): void {
-  worldMesh.geometry.dispose();
-  worldMesh.geometry = buildChunkGeometry(chunk);
 }
 
 function breakAtCursor(): void {
@@ -84,9 +145,11 @@ function breakAtCursor(): void {
     [camera.position.x, camera.position.y, camera.position.z],
     [dirScratch.x, dirScratch.y, dirScratch.z],
     REACH,
-    chunk,
+    chunkManager,
   );
-  if (hit !== null && breakBlock(hit.block, chunk)) rebuildWorld();
+  if (hit !== null && breakBlock(hit.block, chunkManager)) {
+    remeshAround(hit.block[0], hit.block[2]);
+  }
 }
 
 function placeAtCursor(): void {
@@ -94,7 +157,9 @@ function placeAtCursor(): void {
   const block = getActiveBlock(inventory);
   if (block === null) return;
   if (target === null) return;
-  if (placeBlock(target, block, chunk, playerBounds())) rebuildWorld();
+  if (placeBlock(target, block, chunkManager, playerBounds())) {
+    remeshAround(target[0], target[2]);
+  }
 }
 
 /** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
@@ -141,9 +206,11 @@ const onContextMenu = (event: MouseEvent): void => event.preventDefault();
 const onFps = createDebugOverlay();
 const loop = startLoop(({ elapsed, delta }) => {
   controller.update();
-  updatePhysics(body, delta, chunk);
-  resetIfFallenOut(body, SPAWN.y);
+  updatePhysics(body, delta, chunkManager);
+  resetIfFallenOut(body, spawn);
   camera.position.set(body.x, body.y + EYE_HEIGHT, body.z);
+
+  chunkManager.update(body.x, body.z);
 
   target = raycastFromCamera();
   if (target === null) {
@@ -182,6 +249,8 @@ window.addEventListener('beforeunload', () => {
   document.removeEventListener('contextmenu', onContextMenu);
   document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('blur', onBlur);
+  for (const mesh of chunkMeshes.values()) mesh.geometry.dispose();
+  material.dispose();
   highlight.geometry.dispose();
   (highlight.material as THREE.LineBasicMaterial).dispose();
 });

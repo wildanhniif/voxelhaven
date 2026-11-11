@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createPlayerBody, resetIfFallenOut, updatePhysics, type PlayerBody } from '../../src/player/collision';
-import type { VoxelWorld } from '../../src/world/voxel';
+import { asBlockSource, type VoxelWorld } from '../../src/world/voxel';
 
 const SIZE = 32;
 
@@ -9,9 +9,7 @@ function makeWorld(solid: (x: number, y: number, z: number) => boolean): VoxelWo
   for (let y = 0; y < SIZE; y++) {
     for (let z = 0; z < SIZE; z++) {
       for (let x = 0; x < SIZE; x++) {
-        if (solid(x, y, z)) {
-          world.data[y * SIZE * SIZE + z * SIZE + x] = 1;
-        }
+        if (solid(x, y, z)) world.data[y * SIZE * SIZE + z * SIZE + x] = 1;
       }
     }
   }
@@ -19,7 +17,8 @@ function makeWorld(solid: (x: number, y: number, z: number) => boolean): VoxelWo
 }
 
 function stepSeconds(body: PlayerBody, world: VoxelWorld, seconds: number): void {
-  for (let i = 0; i < seconds * 60; i++) updatePhysics(body, 1 / 60, world);
+  const src = asBlockSource(world);
+  for (let i = 0; i < seconds * 60; i++) updatePhysics(body, 1 / 60, src);
 }
 
 describe('collision', () => {
@@ -63,7 +62,7 @@ describe('collision', () => {
   it('resetIfFallenOut mengembalikan player ke spawn', () => {
     const body = createPlayerBody(2, 1, 2);
     body.y = -50;
-    resetIfFallenOut(body, 4);
+    resetIfFallenOut(body, { x: 16, y: 4, z: 16 });
     expect(body.x).toBe(16);
     expect(body.y).toBe(4);
     expect(body.z).toBe(16);

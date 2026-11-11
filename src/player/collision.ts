@@ -1,4 +1,4 @@
-import { isSolid, type VoxelWorld } from '../world/voxel';
+import type { BlockPos, BlockSource } from '../world/voxel';
 import { GRAVITY } from './constants';
 
 export const PLAYER_WIDTH = 0.6;
@@ -25,7 +25,7 @@ const HALF_W = PLAYER_WIDTH / 2;
 const SKIN = 1e-4; // toleransi supaya resolve tidak osilasi antar frame
 
 /** Apakah AABB player (di posisi px,py,pz) overlap blok solid? */
-function collides(px: number, py: number, pz: number, world: VoxelWorld): boolean {
+function collides(px: number, py: number, pz: number, world: BlockSource): boolean {
   const minX = Math.floor(px - HALF_W + SKIN);
   const maxX = Math.floor(px + HALF_W - SKIN);
   const minY = Math.floor(py + SKIN);
@@ -35,7 +35,7 @@ function collides(px: number, py: number, pz: number, world: VoxelWorld): boolea
   for (let y = minY; y <= maxY; y++) {
     for (let z = minZ; z <= maxZ; z++) {
       for (let x = minX; x <= maxX; x++) {
-        if (isSolid([x, y, z], world)) return true;
+        if (world.getBlock([x, y, z] as BlockPos) !== 0) return true;
       }
     }
   }
@@ -46,7 +46,7 @@ function collides(px: number, py: number, pz: number, world: VoxelWorld): boolea
  * Integrasi + resolve tabrakan sumbu-per-sumbu (X, Y, lalu Z).
  * Fungsi murni terhadap world; memutasi body.
  */
-export function updatePhysics(body: PlayerBody, delta: number, world: VoxelWorld): void {
+export function updatePhysics(body: PlayerBody, delta: number, world: BlockSource): void {
   const dt = Math.min(delta, 0.05); // clamp agar tabrakan tetap stabil saat frame drop
 
   // X
@@ -83,11 +83,15 @@ export function updatePhysics(body: PlayerBody, delta: number, world: VoxelWorld
 }
 
 /** Bila player jatuh keluar world (void), reset ke posisi spawn. */
-export function resetIfFallenOut(body: PlayerBody, spawnY: number, limit = -20): void {
+export function resetIfFallenOut(
+  body: PlayerBody,
+  spawn: { x: number; y: number; z: number },
+  limit = -20,
+): void {
   if (body.y < limit) {
-    body.x = 16;
-    body.y = spawnY;
-    body.z = 16;
+    body.x = spawn.x;
+    body.y = spawn.y;
+    body.z = spawn.z;
     body.vx = 0;
     body.vy = 0;
     body.vz = 0;

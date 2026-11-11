@@ -1,4 +1,4 @@
-import { getBlock, setBlock, VOXEL_AIR, type VoxelType, type VoxelWorld } from './voxel';
+import { VOXEL_AIR, type BlockPos, type BlockSource, type VoxelType } from './voxel';
 
 export interface PlayerBounds {
   x: number;
@@ -31,26 +31,26 @@ export function overlapsPlayer(
 }
 
 /** Hancur blok di posisi pos; true kalau ada yang berubah. */
-export function breakBlock(pos: readonly [number, number, number], world: VoxelWorld): boolean {
-  if (getBlock(pos, world) === VOXEL_AIR) return false;
-  return setBlock(pos, VOXEL_AIR, world);
+export function breakBlock(pos: BlockPos, world: BlockSource): boolean {
+  if (world.getBlock(pos) === VOXEL_AIR) return false;
+  return world.setBlock(pos, VOXEL_AIR);
 }
 
 /**
  * Taruh blok. Return false kalau:
- * - target di luar batas world
+ * - target di luar batas (chunk tidak ada / y di luar tinggi)
  * - target sudah solid
  * - target overlap AABB player
  */
 export function placeBlock(
-  pos: readonly [number, number, number],
+  pos: BlockPos,
   type: VoxelType,
-  world: VoxelWorld,
+  world: BlockSource,
   player?: PlayerBounds,
 ): boolean {
   const [x, y, z] = pos;
   if (type === VOXEL_AIR) return false;
-  if (getBlock(pos, world) !== VOXEL_AIR) return false;
+  if (world.getBlock(pos) !== VOXEL_AIR) return false;
   if (player !== undefined && overlapsPlayer(x, y, z, player)) return false;
-  return setBlock(pos, type, world);
+  return world.setBlock(pos, type);
 }

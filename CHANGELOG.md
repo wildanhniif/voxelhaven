@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [M4] — Terrain noise + chunk streaming
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/world/terrain.ts` (baru): `heightAt(x, z, config)` (simplex-noise seeded mulberry32), `generateChunk(cx, cz, config)` murni & deterministik, `topSolidY`, `worldToChunk`; layer stone → dirt (3 blok) → grass.
+- `src/world/chunk-manager.ts` (baru): streaming chunk, load radius 4, unload radius 6, antrian terurut jarak, max 1 chunk di-generate per frame; implements `BlockSource` koordinat dunia.
+- `src/world/voxel.ts`: interface `BlockSource { getBlock, setBlock }` + adapter `asBlockSource`; physics/raycast/edit sekarang koordinat dunia.
+- `src/world/mesher.ts`: per-chunk mesh, culling face lintas chunk via callback `neighbor`.
+- `src/world/chunk.ts` (hapus): diganti terrain.ts.
+- `src/main.ts`: mesh per chunk diposisikan di grid, spawn player di atas permukaan terrain, fog, remesh chunk + tetangga saat edit.
+- Dependency baru: `simplex-noise` (diizinkan untuk milestone ini).
+- `tests/unit/terrain.test.ts` (4 test); total suite 34 test.
+
+### Belum dikerjakan (non-goals M4)
+- Bioma, gua/ore, greedy meshing (perf), save/load chunk yang diedit saat unload.
+
+### Risiko / Tech Debt
+- Unload membuang chunk termasuk edit player (belum ada persistence); terrain regenerasi polos.
+- Ekspose `flatIndex` dari terrain.ts hanya untuk test; bisa dipindah ke helper terpisah.
+- `sim.experimental.frameTimeMetrics` rata-rata ~16.6 ms di Chromium headless (≈60 FPS); max frame 17.7 ms → tidak ada spike > 50 ms saat streaming. Perf nyata perlu cek di mesin user.
+
+### Cara Verifikasi Manual
+1. `npm run dev` → spawn di atas terrain bergelombang (bukan datar).
+2. Jalan ke arah mana pun → chunk baru muncul bertahap di depan (1 chunk/frame, terdekat dulu).
+3. FPS counter stabil di 60 (headless); tidak ada freeze saat chunk masuk.
+4. Edit blok tetap bekerja di koordinat dunia lintas chunk.
+
 ## [M3] — Hotbar + inventory
 Tanggal: 2026-11-11
 
@@ -16,13 +43,6 @@ Tanggal: 2026-11-11
 - `hotbar.update(inv)` dipanggil tiap frame meski state tidak berubah; murah (9 DOM node) tapi bisa dipindah ke event-driven.
 - Swatch hotbar pakai warna solid, belum sinkron otomatis dengan `BLOCK_COLORS` mesher (duplikasi konstanta).
 
-### Cara Verifikasi Manual
-1. `npm run dev` → hotbar 9 kotak muncul di bawah, slot 1 highlight, label "Grass".
-2. Tekan 1-9 → highlight pindah, label berubah (Grass/Dirt/Stone/Slot kosong).
-3. Tekan 4 (slot kosong) → klik kanan tidak menaruh apa pun.
-4. Tekan 2 → klik kanan → blok dirt muncul (bukan grass).
-5. Klik kanan ditahan → repeat tetap pakai blok slot aktif.
-
 ## [M2] — Break/place blok + raycast
 Tanggal: 2026-11-11
 
@@ -35,27 +55,24 @@ Tanggal: 2026-11-11
 - `tests/unit/raycast.test.ts` (6 test) + `tests/unit/block-edit.test.ts` (6 test).
 
 ### Risiko / Tech Debt
-- Remesh setelah edit membangun ulang seluruh chunk (32^3). Cukup cepat untuk klik manual ber-debounce tapi bukan remesh per-chunk-selectif; wajib diganti saat chunk banyak.
-- Tidak ada batas tinggi bangun selain batas chunk.
+- Remesh penuh per edit; diganti remesh chunk + tetangga di M4.
 
 ## [M1] — Voxel world + FPS camera + collision
 Tanggal: 2026-11-11
 
 ### Selesai
 - `src/world/voxel.ts`: `VoxelType = 0 | 1 | 2 | 3`, `getBlock`/`setBlock`/`isSolid` murni, out-of-bounds = kosong.
-- `src/world/chunk.ts`: chunk 32x32x32 `Uint8Array` (flat index X-tercepat, lalu Z, lalu Y); flat 3 layer: stone → dirt → grass.
+- Chunk 32x32x32 `Uint8Array`; flat 3 layer: stone → dirt → grass (diganti terrain noise di M4).
 - `src/world/mesher.ts`: chunk → satu `BufferGeometry`; vertex color per blok + shading per sisi; face yang bersentuhan blok solid di-cull.
 - `src/engine/camera-fps.ts`: pointer lock (klik lock, ESC lepas), yaw/pitch dari mouse, pitch clamp ±89°.
 - `src/player/controller.ts` + `constants.ts`: WASD relatif yaw, Space lompat, jalan 5 m/s, gravitasi 32 m/s² (~1.25 blok).
 - `src/player/collision.ts`: AABB 0.6x1.8x0.6 vs voxel, resolve X→Y→Z, landing snap, respawn bila jatuh keluar world.
-- Rotasi kubus M0 dihapus (kubus diganti world mesh).
 
 ### Perbaikan pasca-M1
 - `c52003f`: tanda rotasi strafe A/D (dan W/S saat yaw≠0) terbalik; ditambah `tests/unit/controller.test.ts`.
 - `33f2b34`: tuner lompatan ke feel Minecraft (gravitasi 32, jump ~1.25 blok).
 
 ### Risiko / Tech Debt
-- Satu chunk 32x32x32 = satu mesh; radius render terbatas pada chunk itu.
 - Physics pakai delta asli yang di-clamp 50 ms; belum fixed timestep.
 
 ## [M0] — Scaffold Vite + Three.js + Loop

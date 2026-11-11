@@ -1,4 +1,4 @@
-import { isSolid, type VoxelWorld } from '../world/voxel';
+import type { BlockSource } from '../world/voxel';
 
 export type Vec3 = readonly [number, number, number];
 
@@ -18,7 +18,7 @@ export function raycastVoxel(
   origin: Vec3,
   direction: Vec3,
   maxDistance: number,
-  world: VoxelWorld,
+  world: BlockSource,
 ): RayHit | null {
   const [ox, oy, oz] = origin;
   const [dx, dy, dz] = direction;
@@ -42,7 +42,7 @@ export function raycastVoxel(
   let tMaxZ = stepZ !== 0 ? boundZ * tDeltaZ : Infinity;
 
   // Sel asal diperiksa dulu (ray mulai di dalam blok).
-  if (isSolid([x, y, z], world)) {
+  if (world.getBlock([x, y, z]) !== 0) {
     return { block: [x, y, z], adjacent: [x - stepX, y - stepY, z - stepZ] };
   }
 
@@ -65,7 +65,7 @@ export function raycastVoxel(
       tMaxZ += tDeltaZ;
       normal = [0, 0, -stepZ];
     }
-    if (isSolid([x, y, z], world)) {
+    if (world.getBlock([x, y, z]) !== 0) {
       return {
         block: [x, y, z],
         adjacent: [x + normal[0], y + normal[1], z + normal[2]],

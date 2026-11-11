@@ -1,5 +1,6 @@
 import { BufferAttribute, BufferGeometry } from 'three';
-import { getBlock, isSolid, type VoxelType, type VoxelWorld } from './voxel';
+import { CHUNK_HEIGHT, CHUNK_SIZE, type Chunk } from './terrain';
+import { flatIndex, VOXEL_AIR, type VoxelType } from './voxel';
 
 type Vec3 = readonly [number, number, number];
 
@@ -24,30 +25,41 @@ const FACES: ReadonlyArray<{
 ];
 
 const FACE_INDICES = [0, 1, 2, 0, 2, 3] as const;
-
 const AO_SHADE = [0.75, 0.85, 1, 0.9, 0.95, 0.8] as const;
 
 /**
- * Ubah voxel world jadi satu BufferGeometry.
- * Face yang bersentuhan dengan blok solid tidak digenerate (culling).
+ * Blok di koordinat lokal chunk (x, y, z); 0 kalau di luar chunk.
+ * `neighbor` dipakai untuk face di tepi chunk supaya culling lintas chunk benar.
  */
-export function buildChunkGeometry(world: VoxelWorld): BufferGeometry {
+function blockAt(chunk: Chunk, x: number, y: number, z: number): VoxelType {
+  if (y < 0 || y >= CHUNK_HEIGHT) return VOXEL_AIR;
+  if (x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
+    return chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] as VoxelType;
+  }
+  const n = chunk.neighbor?.(x, y, z);
+  return n ?? VOXEL_AIR;
+}
+
+/**
+ * Ubah satu chunk jadi BufferGeometry lokal (origin chunk).
+ * Face yang nempel blok solid (termasuk chunk tetangga) tidak digenerate.
+ */
+export function buildChunkGeometry(chunk: Chunk): BufferGeometry {
   const positions: number[] = [];
   const normals: number[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
-  const { size } = world;
 
-  for (let y = 0; y < size; y++) {
-    for (let z = 0; z < size; z++) {
-      for (let x = 0; x < size; x++) {
-        const type = getBlock([x, y, z], world);
-        if (type === 0) continue;
-        const rgb = BLOCK_COLORS[type];
+  for (let y = 0; y < CHUNK_HEIGHT; y++) {
+    for (let z = 0; z < CHUNK_SIZE; z++) {
+      for (let x = 0; x < CHUNK_SIZE; x++) {
+        const type = blockAt(chunk, x, y, z);
+        if (type === VOXEL_AIR) continue;
+        const rgb = BLOCK_COLORS[type as Exclude<VoxelType, 0>];
         for (let f = 0; f < FACES.length; f++) {
           const face = FACES[f]!;
           const [nx, ny, nz] = face.normal;
-          if (isSolid([x + nx, y + ny, z + nz], world)) continue;
+          if (blockAt(chunk, x + nx, y + ny, z + nz) !== VOXEL_AIR) continue;
           const base = positions.length / 3;
           const shade = AO_SHADE[f]!;
           for (const [cx, cy, cz] of face.corners) {
