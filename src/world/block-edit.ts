@@ -9,6 +9,9 @@ export interface PlayerBounds {
 export const PLAYER_WIDTH = 0.6;
 export const PLAYER_HEIGHT = 1.8;
 
+const VOXEL_GRASS = 1;
+const VOXEL_DIRT = 2;
+
 /** Apakah blok (bx,by,bz) overlap AABB player (posisi kaki px,py,pz)? */
 export function overlapsPlayer(
   bx: number,
@@ -41,6 +44,8 @@ export function breakBlock(pos: BlockPos, world: BlockSource): boolean {
  * - target di luar batas (chunk tidak ada / y di luar tinggi)
  * - target sudah solid
  * - target overlap AABB player
+ *
+ * Grass yang tertutup di atasnya otomatis jadi dirt (khas Minecraft).
  */
 export function placeBlock(
   pos: BlockPos,
@@ -52,5 +57,10 @@ export function placeBlock(
   if (type === VOXEL_AIR) return false;
   if (world.getBlock(pos) !== VOXEL_AIR) return false;
   if (player !== undefined && overlapsPlayer(x, y, z, player)) return false;
-  return world.setBlock(pos, type);
+  if (!world.setBlock(pos, type)) return false;
+  const below: BlockPos = [x, y - 1, z];
+  if (world.getBlock(below) === VOXEL_GRASS) {
+    world.setBlock(below, VOXEL_DIRT);
+  }
+  return true;
 }

@@ -67,15 +67,19 @@ export function createTextureAtlas(): Texture {
   // Tile 0: grass top (hijau gelap, sedikit bercak terang).
   paintNoise(ctx, 0, 0, [86, 152, 62], 16, random);
 
-  // Tile 1: grass side (atas 4px hijau, sisanya dirt).
+  // Tile 1: grass side: band hijau tipis 2px + 1px ragged, sisanya dirt.
+  // Tipis supaya grass yang ditumpuk tidak terlihat band ganda tebal.
   paintNoise(ctx, TILE_PX, 0, [134, 96, 60], 14, random, (set) => {
-    for (let py = 0; py < 5; py++) {
+    for (let py = 0; py < 2; py++) {
       for (let px = 0; px < TILE_PX; px++) {
         const d = Math.round((random() - 0.5) * 22);
-        // Tepi bawah layer grass bergerigi, khas Minecraft.
-        if (py === 4 && random() < 0.45) continue;
         set(px, py, [86 + d, 152 + d, 62 + d]);
       }
+    }
+    for (let px = 0; px < TILE_PX; px++) {
+      if (random() < 0.5) continue; // tepi bawah bergerigi
+      const d = Math.round((random() - 0.5) * 22);
+      set(px, 2, [86 + d, 152 + d, 62 + d]);
     }
   });
 
