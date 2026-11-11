@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [M6.2c] — Hard fix viewmodel (skala, posisi, depth)
+Tanggal: 2026-11-11
+
+### Selesai
+- src/player/viewmodel.ts: lengan tunggal BoxGeometry(0.15, 0.15, 0.6) warna kulit 0xF5CBA7, pivot di pangkal (mesh di z=-0.3). Base posisi (0.35, -0.35, -0.5), rotasi (-0.2, -0.4, 0.1).
+- Material MeshBasicMaterial depthTest:false + depthWrite:false, renderOrder 999: tangan selalu digambar paling akhir sehingga tidak tertutup blok.
+- Tangan digantung sebagai child Camera (scene.add(camera) + camera.add(viewmodel.group)), bukan scene terpisah.
+- Animasi: bobbing sin saat jalan; swing sinus mulus 200ms yang mengayun ke depan-turun dari base transform.
+
+### Risiko / Tech Debt
+- depthTest:false berarti tangan juga akan menembus UI 3D lain di masa depan; saat ini aman karena hanya ada world.
+
+### Cara Verifikasi Manual
+1. FPP: tangan memanjang ke depan (bukan gepeng), ujung tidak terpotong layar.
+2. Nempel ke dinding: tangan tetap terlihat penuh, tidak masuk ke blok.
+3. Klik kiri: ayunan mulus ke depan lalu kembali.
+4. Jalan: tangan bobbing pelan. F5: tangan hilang di TPP, muncul lagi di FPP.
+
 ## [M6.2b] — Polish viewmodel + fix bolong perbatasan chunk
 Tanggal: 2026-11-11
 
