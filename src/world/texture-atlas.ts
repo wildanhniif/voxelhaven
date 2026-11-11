@@ -166,3 +166,80 @@ export function tileDataUrl(tile: AtlasTile): string {
   tileImageCache.set(tile, url);
   return url;
 }
+
+/**
+ * Ikon blok isometric ala Minecraft: top face + 2 sisi, digambar sekali
+ * ke canvas 32x32 lalu di-cache sebagai data URL. Dipakai UI hotbar
+ * supaya item blok terlihat "3D", bukan tile datar.
+ */
+const iconImageCache = new Map<string, string>();
+
+export function blockIconDataUrl(top: AtlasTile, side: AtlasTile): string {
+  const key = `${top}|${side}`;
+  const cached = iconImageCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const src = document.createElement('canvas');
+  src.width = TILE_PX * ATLAS_COLS;
+  src.height = TILE_PX * ATLAS_ROWS;
+  const srcCtx = src.getContext('2d');
+  if (srcCtx === null) throw new Error('Canvas 2D context tidak tersedia');
+  srcCtx.drawImage(createTextureAtlas().image as HTMLCanvasElement, 0, 0);
+
+  const out = document.createElement('canvas');
+  out.width = 32;
+  out.height = 32;
+  const ctx = out.getContext('2d');
+  if (ctx === null) throw new Error('Canvas 2D context tidak tersedia');
+  ctx.imageSmoothingEnabled = false;
+
+  // Kubus isometric di 32x32: top face A(0,8) B(16,0) C(32,8) D(16,16).
+  // Top face: unit square -> parallelogram miring kanan.
+  ctx.setTransform(1, -0.5, 1, 0.5, 0, 8);
+  ctx.drawImage(
+    src,
+    (top % ATLAS_COLS) * TILE_PX,
+    Math.floor(top / ATLAS_COLS) * TILE_PX,
+    TILE_PX,
+    TILE_PX,
+    0,
+    0,
+    TILE_PX,
+    TILE_PX,
+  );
+
+  // Sisi kiri (shading tipis) dan kanan (shading lebih gelap) untuk kesan depth.
+  ctx.setTransform(1, 0.5, 0, 1, 0, 8);
+  ctx.drawImage(
+    src,
+    (side % ATLAS_COLS) * TILE_PX,
+    Math.floor(side / ATLAS_COLS) * TILE_PX,
+    TILE_PX,
+    TILE_PX,
+    0,
+    0,
+    TILE_PX,
+    TILE_PX,
+  );
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(0, 0, TILE_PX, TILE_PX);
+
+  ctx.setTransform(1, -0.5, 0, 1, 16, 16);
+  ctx.drawImage(
+    src,
+    (side % ATLAS_COLS) * TILE_PX,
+    Math.floor(side / ATLAS_COLS) * TILE_PX,
+    TILE_PX,
+    TILE_PX,
+    0,
+    0,
+    TILE_PX,
+    TILE_PX,
+  );
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(0, 0, TILE_PX, TILE_PX);
+
+  const url = out.toDataURL('image/png');
+  iconImageCache.set(key, url);
+  return url;
+}

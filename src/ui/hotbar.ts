@@ -1,23 +1,29 @@
 import type { Inventory } from '../state/inventory';
 import { BLOCK_NAMES } from './block-names';
-import { tileDataUrl, type AtlasTile, ATLAS_TILES } from '../world/texture-atlas';
+import { blockIconDataUrl, ATLAS_TILES, type AtlasTile } from '../world/texture-atlas';
 
 export interface HotbarHandle {
   update(inv: Inventory): void;
   dispose(): void;
 }
 
-/** Tile yang mewakili tiap jenis blok di hotbar (grass pakai grass-side biar khas). */
-const HOTBAR_TILES: Record<number, AtlasTile> = {
-  1: ATLAS_TILES.grassSide,
-  2: ATLAS_TILES.dirt,
-  3: ATLAS_TILES.stone,
+/** Face tile per jenis blok: [top, side]. Digabung jadi ikon isometric. */
+const HOTBAR_FACES: Record<number, readonly [AtlasTile, AtlasTile]> = {
+  1: [ATLAS_TILES.grassTop, ATLAS_TILES.grassSide],
+  2: [ATLAS_TILES.dirt, ATLAS_TILES.dirt],
+  3: [ATLAS_TILES.stone, ATLAS_TILES.stone],
 };
 
+/** Ikon isometric per jenis blok, dibuat sekali (canvas -> data URL). */
+function blockIcon(type: number): string {
+  const [top, side] = HOTBAR_FACES[type] ?? HOTBAR_FACES[3]!;
+  return blockIconDataUrl(top, side);
+}
+
 /**
- * Hotbar 9 slot di bawah layar (DOM overlay, bukan 3D).
+ * Hotbar 9 slot di bawah layar (DOM overlay).
  * Highlight slot aktif + nama blok aktif sebagai label.
- * Swatch memakai tekstur atlas asli (pixelated, tanpa smoothing).
+ * Ikon slot = render isometric blok (top + 2 sisi), pixelated tanpa smoothing.
  */
 export function createHotbar(onSlotSelected: (index: number) => void): HotbarHandle {
   const root = document.createElement('div');
@@ -42,10 +48,10 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
     number.textContent = String(i + 1);
     cell.appendChild(number);
 
-    // image-rendering: pixelated = wajib biar 16x16 tile tidak blur saat di-scale.
+    // image-rendering: pixelated = wajib biar ikon 32x32 tidak blur saat di-scale.
     const swatch = document.createElement('div');
     swatch.style.cssText =
-      'width:28px;height:28px;display:none;background-size:cover;image-rendering:pixelated;';
+      'width:28px;height:28px;display:none;background-size:contain;background-position:center;background-repeat:no-repeat;image-rendering:pixelated;';
     cell.appendChild(swatch);
 
     cell.addEventListener('click', () => onSlotSelected(i));
@@ -72,7 +78,7 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
           number.style.display = 'block';
         } else {
           swatch.style.display = 'block';
-          swatch.style.backgroundImage = `url(${tileDataUrl(HOTBAR_TILES[type] ?? ATLAS_TILES.stone)})`;
+          swatch.style.backgroundImage = `url(${blockIcon(type)})`;
           number.style.display = 'none';
         }
       }

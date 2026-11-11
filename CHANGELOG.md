@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [M6.1.1] — Ikon blok isometric di hotbar
+Tanggal: 2026-11-11
+
+### Selesai
+- src/world/texture-atlas.ts: blockIconDataUrl(top, side) -> komposit ikon isometric 32x32 (top face + 2 sisi miring + shading) dari tile atlas, cache per pasangan tile.
+- src/ui/hotbar.ts: swatch memakai ikon isometric (grass: grassTop+grassSide, dirt, stone), background-size: contain. Map lama HOTBAR_TILES digantikan HOTBAR_FACES.
+- src/ui/block-names.ts: hapus BLOCK_SWATCH (tidak terpakai sejak M6.1).
+- tests/unit/block-icon-data-url.test.ts (3 test); total suite 56 test.
+
+### Risiko / Tech Debt
+- Komposit ikon pakai transform canvas per-face; posisi crop sudah mengikuti ATLAS_COLS/ROWS, jadi aman untuk grid atlas baru.
+
+### Cara Verifikasi Manual
+1. npm run dev -> hotbar slot 1-3 menampilkan ikon blok isometric (atas + 2 sisi), mirip item Minecraft.
+
 ## [M6.1] — Tekstur asli di hotbar UI
 Tanggal: 2026-11-11
 
