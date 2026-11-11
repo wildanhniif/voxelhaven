@@ -1,5 +1,11 @@
 import { BufferAttribute, BufferGeometry } from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE, type Chunk } from './terrain';
+import {
+  CHUNK_HEIGHT,
+  CHUNK_SIZE,
+  heightAt,
+  type Chunk,
+  type TerrainConfig,
+} from './terrain';
 import { flatIndex, VOXEL_AIR, type VoxelType } from './voxel';
 
 type Vec3 = readonly [number, number, number];
@@ -28,23 +34,34 @@ const FACE_INDICES = [0, 1, 2, 0, 2, 3] as const;
 const AO_SHADE = [0.75, 0.85, 1, 0.9, 0.95, 0.8] as const;
 
 /**
- * Blok di koordinat lokal chunk (x, y, z); 0 kalau di luar chunk.
- * `neighbor` dipakai untuk face di tepi chunk supaya culling lintas chunk benar.
+ * Culling face di tepi chunk memakai terrain noise, bukan data chunk tetangga:
+ * chunk tetangga yang belum dimuat akan membuat face tepi dianggap kosong
+ * dan muncul "bolong" ke langit. Noise selalu tersedia dan deterministik.
  */
-function blockAt(chunk: Chunk, x: number, y: number, z: number): VoxelType {
-  if (y < 0 || y >= CHUNK_HEIGHT) return VOXEL_AIR;
-  if (x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
-    return chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] as VoxelType;
-  }
-  const n = chunk.neighbor?.(x, y, z);
-  return n ?? VOXEL_AIR;
+function solidForCulling(
+  chunk: Chunk,
+  config: TerrainConfig | undefined,
+  x: number,
+  y: number,
+  z: number,
+): boolean {
+  if (y < 0) return true; // dasar world solid supaya face bawah tidak digambar
+  if (y >= CHUNK_HEIGHT) return false;
+  const inside = x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE;
+  if (inside) return chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] !== VOXEL_AIR;
+
+  // Edit player di dalam chunk selalu menang atas terrain.
+  if (config === undefined) return false;
+  const wx = chunk.cx * CHUNK_SIZE + x;
+  const wz = chunk.cz * CHUNK_SIZE + z;
+  return y <= heightAt(wx, wz, config);
 }
 
 /**
  * Ubah satu chunk jadi BufferGeometry lokal (origin chunk).
- * Face yang nempel blok solid (termasuk chunk tetangga) tidak digenerate.
+ * Face yang nempel blok solid (termasuk chunk tetangga via noise) tidak digenerate.
  */
-export function buildChunkGeometry(chunk: Chunk): BufferGeometry {
+export function buildChunkGeometry(chunk: Chunk, config?: TerrainConfig): BufferGeometry {
   const positions: number[] = [];
   const normals: number[] = [];
   const colors: number[] = [];
@@ -53,13 +70,13 @@ export function buildChunkGeometry(chunk: Chunk): BufferGeometry {
   for (let y = 0; y < CHUNK_HEIGHT; y++) {
     for (let z = 0; z < CHUNK_SIZE; z++) {
       for (let x = 0; x < CHUNK_SIZE; x++) {
-        const type = blockAt(chunk, x, y, z);
+        const type = chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] as VoxelType;
         if (type === VOXEL_AIR) continue;
         const rgb = BLOCK_COLORS[type as Exclude<VoxelType, 0>];
         for (let f = 0; f < FACES.length; f++) {
           const face = FACES[f]!;
           const [nx, ny, nz] = face.normal;
-          if (blockAt(chunk, x + nx, y + ny, z + nz) !== VOXEL_AIR) continue;
+          if (solidForCulling(chunk, config, x + nx, y + ny, z + nz)) continue;
           const base = positions.length / 3;
           const shade = AO_SHADE[f]!;
           for (const [cx, cy, cz] of face.corners) {

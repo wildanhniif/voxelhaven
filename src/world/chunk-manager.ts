@@ -1,5 +1,4 @@
-import type { Chunk, TerrainConfig } from './terrain';
-import { CHUNK_SIZE, generateChunk, worldToChunk } from './terrain';
+import { CHUNK_SIZE, generateChunk, worldToChunk, type Chunk, type TerrainConfig } from './terrain';
 import { flatIndex, VOXEL_AIR, type BlockPos, type BlockSource, type VoxelType } from './voxel';
 
 export const LOAD_RADIUS = 4;
@@ -11,14 +10,17 @@ const MAX_CHUNKS_PER_FRAME = 1;
 export class ChunkManager implements BlockSource {
   private readonly chunks = new Map<string, Chunk>();
   private readonly queue: { cx: number; cz: number; dist: number }[] = [];
-  private readonly neighborLookup = (x: number, y: number, z: number): VoxelType =>
-    this.getBlock([x, y, z]);
 
   constructor(
     private readonly config: TerrainConfig,
     private readonly onChunkLoaded: (chunk: Chunk) => void,
     private readonly onChunkUnloaded: (chunk: Chunk) => void,
   ) {}
+
+  /** Config terrain dipakai mesher untuk culling di tepi chunk. */
+  get terrainConfig(): TerrainConfig {
+    return this.config;
+  }
 
   get loadedCount(): number {
     return this.chunks.size;
@@ -74,7 +76,6 @@ export class ChunkManager implements BlockSource {
     for (let i = 0; i < MAX_CHUNKS_PER_FRAME && this.queue.length > 0; i++) {
       const { cx, cz } = this.queue.shift()!;
       const chunk = generateChunk(cx, cz, this.config);
-      chunk.neighbor = this.neighborLookup;
       this.chunks.set(key(cx, cz), chunk);
       this.onChunkLoaded(chunk);
       loadedChunk = chunk;

@@ -13,11 +13,6 @@ export interface Chunk {
   /** Koordinat grid chunk (x, z). */
   cx: number;
   cz: number;
-  /**
-   * Blok dari chunk tetangga untuk koordinat lokal di luar [0, CHUNK_SIZE).
-   * Dipakai mesher supaya culling face di tepi chunk benar.
-   */
-  neighbor?: (x: number, y: number, z: number) => VoxelType | undefined;
 }
 
 export const DEFAULT_SEED = 1337;

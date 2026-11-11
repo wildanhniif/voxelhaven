@@ -55,7 +55,7 @@ function buildMesh(chunk: Chunk): void {
     chunkGroup.remove(existing);
     chunkMeshes.delete(key);
   }
-  const mesh = new THREE.Mesh(buildChunkGeometry(chunk), material);
+  const mesh = new THREE.Mesh(buildChunkGeometry(chunk, DEFAULT_TERRAIN), material);
   mesh.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
   chunkMeshes.set(key, mesh);
   chunkGroup.add(mesh);
