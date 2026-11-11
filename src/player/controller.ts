@@ -64,8 +64,9 @@ export function createController(
       const cos = Math.cos(yaw);
       const len = Math.hypot(dx, dz);
       if (len > 0) {
-        body.vx = ((dx * cos - dz * sin) / len) * WALK_SPEED;
-        body.vz = ((dz * cos + dx * sin) / len) * WALK_SPEED;
+        // Forward kamera di yaw: (-sin, -cos); kanan: (cos, -sin).
+        body.vx = ((dx * cos + dz * sin) / len) * WALK_SPEED;
+        body.vz = ((dz * cos - dx * sin) / len) * WALK_SPEED;
       } else {
         body.vx = 0;
         body.vz = 0;
