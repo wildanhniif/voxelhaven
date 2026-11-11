@@ -285,7 +285,7 @@ const loop = startLoop(({ elapsed, delta }) => {
   // Loop memberi delta dalam ms; animasi pakai detik.
   const moving = fpsCamera.isLocked && (body.vx !== 0 || body.vz !== 0);
   playerModel.animate(delta / 1000, moving);
-  fppArms.update(delta / 1000, moving, fpsCamera.pitch, fpsCamera.yaw);
+  fppArms.update(delta / 1000, moving, fpsCamera.pitch);
   // Pickup item: inventory penuh → tryPickup false → item tetap di tanah.
   itemDrops.update(delta / 1000, body, chunkManager, (type) => {
     const next = addItem(inventory, type);

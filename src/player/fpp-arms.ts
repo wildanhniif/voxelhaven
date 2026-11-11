@@ -19,7 +19,7 @@ export interface FirstPersonArmsHandle {
   readonly group: Group;
   swing(): void;
   /** delta DETIK; pitch = rotasi kamera X (radian). */
-  update(delta: number, moving: boolean, pitch: number, yaw: number): void;
+  update(delta: number, moving: boolean, pitch: number): void;
   setVisible(visible: boolean): void;
   dispose(): void;
 }
@@ -72,7 +72,7 @@ export function createFirstPersonArms(): FirstPersonArmsHandle {
     swing() {
       swingT = 0;
     },
-    update(delta, moving, pitch, yaw) {
+    update(delta, moving, pitch) {
       elapsed += delta;
       const bob = moving ? Math.sin(elapsed * 8) : 0;
 
@@ -80,9 +80,9 @@ export function createFirstPersonArms(): FirstPersonArmsHandle {
       const lift = pitch * 0.35;
       armR.position.y = BASE_POS_Y + bob * 0.02 + lift;
       armL.position.y = BASE_POS_Y + bob * 0.02 + lift;
-      // Yaw menggeser sedikit: lengan ikut rotasi badan.
-      armR.position.x = BASE_POS_X - bob * 0.01 + yaw * 0.02;
-      armL.position.x = -BASE_POS_X - bob * 0.01 + yaw * 0.02;
+      // Lengan tetap di sisi kiri/kanan, hanya bobbing saat jalan.
+      armR.position.x = BASE_POS_X - bob * 0.01;
+      armL.position.x = -BASE_POS_X - bob * 0.01;
 
       if (swingT >= 0) {
         swingT += delta / SWING_DURATION;

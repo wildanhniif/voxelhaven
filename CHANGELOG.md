@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [M6.5.1] — Fix lengan FPP bergeser saat kamera diputar terus
+Tanggal: 2026-11-11
+
+### Selesai
+- Bug: yaw kamera tidak di-wrap ke ±π (terus membesar saat muter), sedangkan fpp-arms memakai yaw*0.02 sebagai offset horizontal → setelah berputar beberapa kali lengan bergeser sampai keluar layar.
+- Fix: hapus pengaruh yaw terhadap posisi lengan + drop parameter yaw dari update().
+
+### Cara Verifikasi Manual
+1. FPP: gulir mouse ke kanan/kiri terus menerus 10+ putaran → lengan tetap di tempat.
+
 ## [M6.5] — Item drops & inventory count
 Tanggal: 2026-11-11
 
