@@ -1,8 +1,8 @@
 import { isSolid, type VoxelWorld } from '../world/voxel';
+import { GRAVITY } from './constants';
 
 export const PLAYER_WIDTH = 0.6;
 export const PLAYER_HEIGHT = 1.8;
-export const GRAVITY = 28; // m/s^2
 export const TERMINAL_VELOCITY = 55; // m/s
 
 export interface PlayerBody {
