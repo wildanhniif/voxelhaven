@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [M6.3.2] — Fix lengan saat lihat ke bawah
+Tanggal: 2026-11-11
+
+### Selesai
+- Bug: pitch kamera dikali 0.8 tanpa clamp; lihat lurus ke bawah (pitch ~1.55 rad) membuat lengan berotasi ~1.8 rad = terpaksa naik ke depan muka (jelek).
+- Fix: pengaruh pitch di-clamp (armPitch 0.45x, rentang [-0.5, +0.35]). Lihat bawah → lengan hampir lurus ke bawah dekat badan (tidak menutup layar); lihat atas → lengan sedikit terangkat.
+
+### Cara Verifikasi Manual
+1. FPP: lihat lurus ke bawah → lengan lurus ke bawah dekat badan, badan/kaki terlihat wajar, tidak ada lengan menutup layar.
+2. Lihat ke langit → lengan terangkat sedikit, normal.
+
 ## [M6.3.1] — Tangan mengikuti pitch kamera
 Tanggal: 2026-11-11
 

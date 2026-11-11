@@ -89,10 +89,12 @@ export function createPlayerModel(): PlayerModelHandle {
       const ph = Math.sin(elapsed * 8) * (walking ? 0.5 : 0);
       legL.rotation.x = ph;
       legR.rotation.x = -ph;
-      // Tangan diangkat ke depan + mengikuti pitch kamera:
-      // lihat bawah → tangan turun, lihat atas → tangan naik.
-      armL.rotation.x = ARM_FORWARD - ph * 0.6 + pitch * 0.8;
-      armR.rotation.x = ARM_FORWARD + ph * 0.6 + pitch * 0.8;
+      // Lengan mengikuti arah pandang, tapi dibatasi:
+      // lihat bawah → lengan lurus ke bawah (dekat badan, tidak menutup layar),
+      // lihat atas → lengan sedikit terangkat. Clamp mencegah lengan naik ke muka.
+      const armPitch = Math.min(Math.max(pitch * 0.45, -0.5), 0.35);
+      armL.rotation.x = ARM_FORWARD - ph * 0.6 + armPitch;
+      armR.rotation.x = ARM_FORWARD + ph * 0.6 + armPitch;
       if (swingT >= 0) {
         swingT += delta / SWING_DURATION;
         if (swingT > 1) swingT = -1;
