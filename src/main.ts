@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createFpsCamera } from './engine/camera-fps';
+import { createFpsCamera, tppCameraDistance } from './engine/camera-fps';
 import { startLoop } from './engine/loop';
 import { createDebugOverlay } from './ui/debug-overlay';
 import { createHotbar } from './ui/hotbar';
@@ -10,8 +10,10 @@ import { ChunkManager } from './world/chunk-manager';
 import { buildChunkGeometry } from './world/mesher';
 import { createTextureAtlas } from './world/texture-atlas';
 import { CHUNK_SIZE, DEFAULT_TERRAIN, worldToChunk, type Chunk } from './world/terrain';
-import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { createController, EYE_HEIGHT } from './player/controller';
+import { createViewModel } from './player/viewmodel';
+import { createPlayerModel } from './player/player-model';
+import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { raycastVoxel, type Vec3 } from './player/raycast';
 
 const SPAWN_XZ = { x: 8, z: 8 } as const;
@@ -117,6 +119,13 @@ highlight.visible = false;
 scene.add(highlight);
 
 const fpsCamera = createFpsCamera(camera, renderer.domElement);
+
+// Viewmodel menempel di kamera; kamera harus masuk scene graph.
+scene.add(camera);
+const viewmodel = createViewModel();
+camera.add(viewmodel.group);
+const playerModel = createPlayerModel();
+scene.add(playerModel.group);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
 
 let inventory: Inventory = createInventory();
@@ -132,25 +141,33 @@ function playerBounds(): PlayerBounds {
   return { x: body.x, y: body.y, z: body.z };
 }
 
-function raycastFromCamera(): Vec3 | null {
+/** Arah kamera sebagai [x,y,z] ke scratch (hindari alokasi). */
+function lookDirection(): readonly [number, number, number] {
   camera.getWorldDirection(dirScratch);
-  const hit = raycastVoxel(
-    [camera.position.x, camera.position.y, camera.position.z],
-    [dirScratch.x, dirScratch.y, dirScratch.z],
-    REACH,
-    chunkManager,
-  );
+  return [dirScratch.x, dirScratch.y, dirScratch.z];
+}
+
+/** Posisi mata player; dipakai kamera FPP/TPP dan raycast blok. */
+function eyePosition(): readonly [number, number, number] {
+  return [body.x, body.y + EYE_HEIGHT, body.z];
+}
+
+/**
+ * Raycast selalu dari mata player, bukan dari kamera: di TPP kamera ada
+ * di belakang badan, jadi block terdekat ke kamera bukan yang dibidik.
+ */
+function raycastFromEye(): { hit: ReturnType<typeof raycastVoxel> } {
+  const eye: [number, number, number] = [body.x, body.y + EYE_HEIGHT, body.z];
+  return { hit: raycastVoxel(eye, lookDirection(), REACH, chunkManager) };
+}
+
+function raycastFromCamera(): Vec3 | null {
+  const { hit } = raycastFromEye();
   return hit === null ? null : hit.adjacent;
 }
 
 function breakAtCursor(): void {
-  camera.getWorldDirection(dirScratch);
-  const hit = raycastVoxel(
-    [camera.position.x, camera.position.y, camera.position.z],
-    [dirScratch.x, dirScratch.y, dirScratch.z],
-    REACH,
-    chunkManager,
-  );
+  const { hit } = raycastFromEye();
   if (hit !== null && breakBlock(hit.block, chunkManager)) {
     remeshAround(hit.block[0], hit.block[2]);
   }
@@ -168,6 +185,7 @@ function placeAtCursor(): void {
 
 /** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
 function performAction(button: number): void {
+  viewmodel.swing();
   if (button === 0) breakAtCursor();
   else if (button === 2) placeAtCursor();
 }
@@ -212,12 +230,31 @@ function updateHeldAction(now: number): void {
 
 const onContextMenu = (event: MouseEvent): void => event.preventDefault();
 
+/**
+ * Posisi kamera per mode. FPP: di mata. TPP: mundur dari mata sesuai arah
+ * pandang, dibatasi camera collision (tidak menembus blok solid).
+ */
+function applyCameraMode(): void {
+  const eye = eyePosition();
+  camera.position.set(eye[0], eye[1], eye[2]);
+  const tpp = fpsCamera.mode === 'TPP';
+  viewmodel.group.visible = !tpp;
+  playerModel.group.visible = tpp;
+  if (tpp) {
+    const dir = lookDirection();
+    const dist = tppCameraDistance(eye, [-dir[0], -dir[1], -dir[2]], chunkManager);
+    camera.position.set(eye[0] - dir[0] * dist, eye[1] - dir[1] * dist, eye[2] - dir[2] * dist);
+    playerModel.update(body, fpsCamera.yaw, fpsCamera.pitch);
+  }
+}
+
+
 const onFps = createDebugOverlay();
 const loop = startLoop(({ elapsed, delta }) => {
   controller.update();
   updatePhysics(body, delta, chunkManager);
   resetIfFallenOut(body, spawn);
-  camera.position.set(body.x, body.y + EYE_HEIGHT, body.z);
+  applyCameraMode();
 
   chunkManager.update(body.x, body.z);
 
@@ -228,8 +265,9 @@ const loop = startLoop(({ elapsed, delta }) => {
     highlight.visible = true;
     highlight.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
   }
-
   updateHeldAction(performance.now());
+  const moving = fpsCamera.isLocked && (body.vx !== 0 || body.vz !== 0);
+  viewmodel.update(delta, moving);
 
   hotbar.update(inventory);
   renderer.render(scene, camera);
@@ -253,7 +291,8 @@ window.addEventListener('beforeunload', () => {
   loop();
   controller.dispose();
   fpsCamera.dispose();
-  hotbar.dispose();
+  viewmodel.dispose();
+  playerModel.dispose();
   document.removeEventListener('mousedown', onMouseDown);
   document.removeEventListener('mouseup', onMouseUp);
   document.removeEventListener('contextmenu', onContextMenu);

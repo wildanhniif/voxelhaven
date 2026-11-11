@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [M6.2] — Viewmodel & Third-Person Camera (TPP)
+Tanggal: 2026-11-11
+
+### Selesai
+- src/player/viewmodel.ts (baru): tangan FPP sederhana (BoxGeometry) menempel di kamera, idle bobbing saat bergerak + swing singkat saat klik kiri/kanan.
+- src/player/player-model.ts (baru): badan player kotak-kotak (2 kaki, badan, 2 tangan, kepala), warna solid, posisi di kaki player, kepala mengikuti pitch.
+- src/engine/camera-fps.ts: mode kamera FPP/TPP, tombol F5 toggle (dialihkan dari refresh), helper murni tppCameraDistance untuk camera collision.
+- src/main.ts: wiring viewmodel (child kamera) + player model; posisi kamera TPP mundur 4 blok dengan collision (tidak tembus blok); viewmodel disembunyikan di TPP; raycast blok tetap dari mata player supaya akurat di kedua mode.
+- tests/unit/tpp-camera.test.ts (4 test); total suite 60 test.
+
+### Risiko / Tech Debt
+- Camera collision memakai langkah diskret 0.1 blok (step) bukan raycast kontinu: cukup rapat untuk blok 1px, tapi cek visual di layar asli tetap disarankan.
+- Model player pakai warna solid, belum skin; animasi kaki statis (non-goal M6.2).
+- F5 di-preventDefault sehingga tidak refresh halaman saat toggle kamera.
+
+### Cara Verifikasi Manual
+1. npm run dev -> FPP terlihat tangan kanan bawah, ayun saat klik kiri/kanan, bob saat jalan.
+2. Tekan F5 -> TPP, badan player terlihat utuh di belakang kamera.
+3. Di TPP, mundur sampai membelakangi tembok: kamera maju otomatis, tidak tembus.
+4. Tekan F5 lagi -> balik FPP.
+
+### Catatan Kalau Mentok
+- Kalau kamera TPP tembus pandang / nyangkut di kepala: STOP, laporkan, jangan lanjut M7.
+
 ## [M6.1.1] — Ikon blok isometric di hotbar
 Tanggal: 2026-11-11
 
