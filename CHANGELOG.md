@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [M6] — Texture atlas
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/world/texture-atlas.ts` (baru): atlas procedural 2x2 tile 16x16 px via canvas 2D (grass-top, grass-side, dirt, stone), noise deterministik mulberry32, `CanvasTexture` + NearestFilter (mag & min), mipmaps off, sRGB.
+- `src/world/mesher.ts`: attribute `uv` di BufferGeometry; UV per face (grass top / grass-side / dirt-bottom), half-texel inset untuk anti bleeding; `BLOCK_COLORS` + AO shade tetap dipakai sebagai vertex color (dikali texture).
+- `src/main.ts`: `MeshLambertMaterial({ vertexColors: true, map: atlas })`.
+- `tests/unit/texture-atlas.test.ts` (4 test); total suite 47 test.
+
+### Belum dikerjakan (non-goals M6)
+- Mipmapping (bisa bikin bleeding), lighting/AO sungguhan, animasi tekstur.
+
+### Risiko / Tech Debt
+- Half-texel inset membuat 1 piksel tepi tile sedikit menyusut; visually fine di NearestFilter.
+- Tile baru perlu ditambahkan ke grid atlas (ATLAS_COLS/ROWS dan ATLAS_TILES) — belum generik.
+- Vertex color × texture membuat warna tergantung keduanya; kalau vertex color jadi 0, tile gelap.
+
+### Cara Verifikasi Manual
+1. `npm run dev` → terrain bertekstur pixel-art (grain), bukan warna solid.
+2. Zoom dekat: tepi tekstur tajam/pixelated, tidak blur.
+3. Tidak ada garis/warna aneh di sambungan antar blok (UV bleeding).
+4. Blok grass: permukaan atas hijau bergrain, sisi bawah hijau-ke-cokelat (band 5px) — beda dari atas.
+5. FPS stabil (~60 headless, avg 16.62 ms, max 18.00 ms — tidak drop).
+
 ## [M5] — Persistence untuk edit blok
 Tanggal: 2026-11-11
 
@@ -14,7 +38,7 @@ Tanggal: 2026-11-11
 
 ### Risiko / Tech Debt
 - `editsInChunk` scan linear semua edit (O(n)); jadi lambat kalau edit > ribuan. Perlu index per-chunk kalau world edit-nya masif.
-- Quota localStorage (~5 MB) belum di-handle; `flush` bisa lempar `QuotaExceededError` pada world yang sangat banyak diedit. Edit 1 blok ≈ 15 byte JSON, jalu ~300 ribu edit sebelum bahaya; risiko rendah untuk sekarang.
+- Quota localStorage (~5 MB) belum di-handle; `flush` bisa lempar `QuotaExceededError` pada world yang sangat banyak diedit. Edit 1 blok ≈ 15 byte JSON, jadi baru bahaya di ~300 ribu edit; risiko rendah untuk sekarang.
 - Reset world tidak meminta konfirmasi (Backspace langsung reload).
 
 ### Cara Verifikasi Manual

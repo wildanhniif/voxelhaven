@@ -3,7 +3,7 @@
 Clone Minecraft berbasis web. Voxel 3D, kamera FPS, hancur/taruh blok.
 
 ## Status
-M5 selesai: terrain noise + chunk streaming + persistence edit blok. Lihat `CHANGELOG.md`.
+M6 selesai: terrain noise + chunk streaming + persistence edit blok + texture atlas pixel-art. Lihat `CHANGELOG.md`.
 
 ## Cara Menjalankan
 ```bash

@@ -8,6 +8,7 @@ import { createInventory, getActiveBlock, selectSlot, type Inventory } from './s
 import { breakBlock, placeBlock, type PlayerBounds } from './world/block-edit';
 import { ChunkManager } from './world/chunk-manager';
 import { buildChunkGeometry } from './world/mesher';
+import { createTextureAtlas } from './world/texture-atlas';
 import { CHUNK_SIZE, DEFAULT_TERRAIN, worldToChunk, type Chunk } from './world/terrain';
 import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { createController, EYE_HEIGHT } from './player/controller';
@@ -28,7 +29,7 @@ scene.fog = new THREE.Fog(0x87ceeb, 40, 130);
 
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 400);
 
-const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+const material = new THREE.MeshLambertMaterial({ vertexColors: true, map: createTextureAtlas() });
 const chunkGroup = new THREE.Group();
 scene.add(chunkGroup);
 const chunkMeshes = new Map<string, THREE.Mesh>();
