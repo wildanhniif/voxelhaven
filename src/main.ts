@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { createFpsCamera } from './engine/camera-fps';
 import { startLoop } from './engine/loop';
 import { createDebugOverlay } from './ui/debug-overlay';
+import { createHotbar } from './ui/hotbar';
+import { createInventory, getActiveBlock, selectSlot, type Inventory } from './state/inventory';
 import { breakBlock, placeBlock, type PlayerBounds } from './world/block-edit';
 import { generateFlatChunk } from './world/chunk';
 import { buildChunkGeometry } from './world/mesher';
@@ -46,9 +48,14 @@ const fpsCamera = createFpsCamera(camera, renderer.domElement);
 const body = createPlayerBody(SPAWN.x, SPAWN.y, SPAWN.z);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
 
+let inventory: Inventory = createInventory();
 let target: Vec3 | null = null;
 let heldButton = -1;
 let nextRepeatAt = 0;
+
+const hotbar = createHotbar((index) => {
+  inventory = selectSlot(inventory, index);
+});
 
 function playerBounds(): PlayerBounds {
   return { x: body.x, y: body.y, z: body.z };
@@ -83,8 +90,11 @@ function breakAtCursor(): void {
 }
 
 function placeAtCursor(): void {
+  // Slot kosong → tidak menaruh apa pun.
+  const block = getActiveBlock(inventory);
+  if (block === null) return;
   if (target === null) return;
-  if (placeBlock(target, 1, chunk, playerBounds())) rebuildWorld();
+  if (placeBlock(target, block, chunk, playerBounds())) rebuildWorld();
 }
 
 /** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
@@ -105,8 +115,17 @@ function onMouseUp(): void {
   heldButton = -1;
 }
 
+/** Kalau tab kehilangan fokus (alt-tab), stop repeat agar tidak "nyangkut" menahan klik. */
 function onBlur(): void {
   heldButton = -1;
+}
+
+/** Pilih slot via tombol 1..9. */
+function onKeyDown(event: KeyboardEvent): void {
+  const index = Number(event.key) - 1;
+  if (Number.isInteger(index) && index >= 0 && index < 9) {
+    inventory = selectSlot(inventory, index);
+  }
 }
 
 /** Repeat saat tombol ditahan, dijalankan dari loop render (tidak ada timer terpisah). */
@@ -136,6 +155,7 @@ const loop = startLoop(({ elapsed, delta }) => {
 
   updateHeldAction(performance.now());
 
+  hotbar.update(inventory);
   renderer.render(scene, camera);
   onFps(elapsed);
 });
@@ -143,6 +163,7 @@ const loop = startLoop(({ elapsed, delta }) => {
 document.addEventListener('mousedown', onMouseDown);
 document.addEventListener('mouseup', onMouseUp);
 document.addEventListener('contextmenu', onContextMenu);
+document.addEventListener('keydown', onKeyDown);
 window.addEventListener('blur', onBlur);
 
 window.addEventListener('resize', () => {
@@ -155,9 +176,11 @@ window.addEventListener('beforeunload', () => {
   loop();
   controller.dispose();
   fpsCamera.dispose();
+  hotbar.dispose();
   document.removeEventListener('mousedown', onMouseDown);
   document.removeEventListener('mouseup', onMouseUp);
   document.removeEventListener('contextmenu', onContextMenu);
+  document.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('blur', onBlur);
   highlight.geometry.dispose();
   (highlight.material as THREE.LineBasicMaterial).dispose();

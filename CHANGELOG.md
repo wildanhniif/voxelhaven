@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [M3] — Hotbar + inventory
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/state/inventory.ts`: `Inventory` 9 slot (fungsi murni: `selectSlot`, `setSlot`, `getActiveBlock`); default slot 0=grass, 1=dirt, 2=stone, sisanya null.
+- `src/ui/hotbar.ts` + `src/ui/block-names.ts`: hotbar DOM di bawah layar, slot aktif di-highlight, nama blok aktif sebagai label; swatch warna per jenis blok.
+- Input: tombol 1-9 pilih slot (klik mouse pada slot juga bisa), klik kanan menaruh blok dari slot aktif, slot kosong = tidak menaruh apa pun.
+- `tests/unit/inventory.test.ts` (6 test) → total suite 30 test.
+
+### Belum dikerjakan (non-goals M3)
+- Crafting, stack count, drag & drop. Viewmodel tangan player (diusulkan, belum di-scope).
+
+### Risiko / Tech Debt
+- `hotbar.update(inv)` dipanggil tiap frame meski state tidak berubah; murah (9 DOM node) tapi bisa dipindah ke event-driven.
+- Swatch hotbar pakai warna solid, belum sinkron otomatis dengan `BLOCK_COLORS` mesher (duplikasi konstanta).
+
+### Cara Verifikasi Manual
+1. `npm run dev` → hotbar 9 kotak muncul di bawah, slot 1 highlight, label "Grass".
+2. Tekan 1-9 → highlight pindah, label berubah (Grass/Dirt/Stone/Slot kosong).
+3. Tekan 4 (slot kosong) → klik kanan tidak menaruh apa pun.
+4. Tekan 2 → klik kanan → blok dirt muncul (bukan grass).
+5. Klik kanan ditahan → repeat tetap pakai blok slot aktif.
+
 ## [M2] — Break/place blok + raycast
 Tanggal: 2026-11-11
 
@@ -7,24 +30,13 @@ Tanggal: 2026-11-11
 - `src/player/raycast.ts`: `raycastVoxel(origin, direction, maxDistance, world)` dengan DDA (Amanatides-Woo), mengembalikan `{ block, adjacent }`.
 - `src/world/block-edit.ts`: `breakBlock`, `placeBlock` (guard: luar batas, sudah solid, overlap AABB player), plus `overlapsPlayer`.
 - Highlight target: `LineSegments` wireframe putih 1.001x di blok yang di-target kamera (reach 6 blok).
-- Input: klik kiri hancur, klik kanan taruh grass, debounce 200 ms, hanya saat pointer lock.
+- Input: klik kiri hancur, klik kanan taruh blok dari slot aktif, aksi pertama instan + hold-to-repeat 200 ms (`d01cb25`), hanya saat pointer lock.
 - Update mesh setelah edit (bangun ulang geometri chunk sekali per klik).
-- `tests/unit/raycast.test.ts` (6 test) + `tests/unit/block-edit.test.ts` (6 test) → total suite 24 test.
-
-### Belum dikerjakan (non-goals M2)
-- Inventory & pemilihan blok (M3), tekstur, sound, undo.
+- `tests/unit/raycast.test.ts` (6 test) + `tests/unit/block-edit.test.ts` (6 test).
 
 ### Risiko / Tech Debt
-- Remesh setelah edit membangun ulang seluruh chunk (32^3). Cukup cepat untuk klik manual (debounce 200 ms) tapi bukan remesh per-chunk-selectif; wajib diganti saat chunk banyak.
-- `main.ts` fungsi `onMouseDown` > 60 baris (aturan 6 AGENTS.md dilanggar) karena raycast duplikat untuk dapat blok asli.
+- Remesh setelah edit membangun ulang seluruh chunk (32^3). Cukup cepat untuk klik manual ber-debounce tapi bukan remesh per-chunk-selectif; wajib diganti saat chunk banyak.
 - Tidak ada batas tinggi bangun selain batas chunk.
-
-### Cara Verifikasi Manual
-1. `npm run dev` → klik kanvas → arahkan ke tanah → muncul outline putih di blok target.
-2. Klik kiri → blok hilang (lubang terlihat).
-3. Klik kanan → blok grass muncul di sisi yang di-target.
-4. Arahkan ke posisi di dalam tubuh sendiri → klik kanan tidak menaruh blok.
-5. Klik spam cepat → hanya satu edit per 200 ms.
 
 ## [M1] — Voxel world + FPS camera + collision
 Tanggal: 2026-11-11
@@ -44,7 +56,6 @@ Tanggal: 2026-11-11
 
 ### Risiko / Tech Debt
 - Satu chunk 32x32x32 = satu mesh; radius render terbatas pada chunk itu.
-- Bundle > 500 kB karena Three.js.
 - Physics pakai delta asli yang di-clamp 50 ms; belum fixed timestep.
 
 ## [M0] — Scaffold Vite + Three.js + Loop
