@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [M6.2d] — Pose tangan FPP dihitung terhadap frustum
+Tanggal: 2026-11-11
+
+### Selesai
+- Root cause terpotong: base y=-0.35 tepat di tepi bawah frustum (y=-0.35 di z=-0.5, FOV 70°) dan yaw -0.4 memutar ujung lengan menjauhi tengah layar.
+- Pose baru dihitung numerik terhadap frustum: base (0.28, -0.22, -0.5) = NDC (0.44, -0.63), rot (-0.1, +0.55, 0.25) → ujung lengan menunjuk ke tengah layar NDC (0, -0.41). Kedua ujung terverifikasi di dalam layar.
+- Panjang lengan 0.55, lebar/tinggi 0.15, warna 0xF5CBA7, pivot pangkal, depth flags + renderOrder 999 tetap.
+
+### Cara Verifikasi Manual
+1. FPP: lengan menjulur dari kanan-bawah ke arah tengah, tidak ada bagian terpotong tepi layar.
+
 ## [M6.2c] — Hard fix viewmodel (skala, posisi, depth)
 Tanggal: 2026-11-11
 
