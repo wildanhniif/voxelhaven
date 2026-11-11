@@ -127,3 +127,42 @@ export function tileUv(tile: AtlasTile): { u0: number; v0: number; u1: number; v
     v1: (row + 1) / ATLAS_ROWS - halfV,
   };
 }
+
+/**
+ * Satu tile atlas sebagai data URL PNG 16x16 (dipakai UI hotbar).
+ * Dibuat sekali per tile lalu di-cache, supaya tidak menggambar ulang tiap frame.
+ */
+const tileImageCache = new Map<AtlasTile, string>();
+
+export function tileDataUrl(tile: AtlasTile): string {
+  const cached = tileImageCache.get(tile);
+  if (cached !== undefined) return cached;
+
+  const src = document.createElement('canvas');
+  src.width = TILE_PX * ATLAS_COLS;
+  src.height = TILE_PX * ATLAS_ROWS;
+  const srcCtx = src.getContext('2d');
+  if (srcCtx === null) throw new Error('Canvas 2D context tidak tersedia');
+  srcCtx.drawImage(createTextureAtlas().image as HTMLCanvasElement, 0, 0);
+
+  const out = document.createElement('canvas');
+  out.width = TILE_PX;
+  out.height = TILE_PX;
+  const outCtx = out.getContext('2d');
+  if (outCtx === null) throw new Error('Canvas 2D context tidak tersedia');
+  outCtx.drawImage(
+    src,
+    (tile % ATLAS_COLS) * TILE_PX,
+    Math.floor(tile / ATLAS_COLS) * TILE_PX,
+    TILE_PX,
+    TILE_PX,
+    0,
+    0,
+    TILE_PX,
+    TILE_PX,
+  );
+
+  const url = out.toDataURL('image/png');
+  tileImageCache.set(tile, url);
+  return url;
+}

@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## [M6.1] — Tekstur asli di hotbar UI
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/world/texture-atlas.ts`: helper `tileDataUrl(tile)` -> crop satu tile 16x16 dari atlas jadi data URL PNG, di-cache per tile.
+- `src/ui/hotbar.ts`: swatch slot memakai `background-image` tekstur atlas (grass pakai grass-side, dirt, stone), `image-rendering: pixelated`, `background-size: cover`. Kotak warna solid (BLOCK_SWATCH) tidak dipakai lagi.
+- Fix bug lama M3: `cell.textContent = ''` ikut menghapus swatch karena swatch adalah child cell; nomor slot kini di `<span>` terpisah.
+- `tests/unit/tile-data-url.test.ts` (3 test); total suite 53 test.
+
+### Risiko / Tech Debt
+- `BLOCK_SWATCH` di `src/ui/block-names.ts` sekarang tidak terpakai (kandidat hapus).
+- Tile hotbar di-hardcode per blok; kalau blok baru ditambah, update HOTBAR_TILES.
+
+### Cara Verifikasi Manual
+1. `npm run dev` -> hotbar slot 1-3 menampilkan tekstur grass/dirt/stone, bukan warna solid.
+2. Swatch tetap tajam (pixelated) walau di-scale dari 16px ke 28px.
 ## [M6] — Texture atlas
 Tanggal: 2026-11-11
 
