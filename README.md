@@ -56,6 +56,7 @@ deterministik dari noise, lalu edit diterapkan di atasnya. Akibatnya:
 - `src/state/inventory.ts` → state hotbar 9 slot berisi stack `{ type, count }` (fungsi murni)
 - `src/entity/item-drop.ts` → entity item drop: fisika jatuh, putar/bobbing, pickup radius
 - `src/ui/hotbar.ts` → render hotbar DOM + badge count + nama blok
+- `src/ui/touch-controls.ts` → joystick virtual + drag look + tombol aksi (mobile)
 
 ## Roadmap
 Lihat AGENTS.md dan CHANGELOG.md.

@@ -11,6 +11,7 @@ import { ChunkManager } from './world/chunk-manager';
 import { buildChunkGeometry } from './world/mesher';
 import { createTextureAtlas } from './world/texture-atlas';
 import { CHUNK_SIZE, DEFAULT_TERRAIN, worldToChunk, type Chunk } from './world/terrain';
+import { createTouchControls } from './ui/touch-controls';
 import { createController, EYE_HEIGHT } from './player/controller';
 import { createFirstPersonArms } from './player/fpp-arms';
 import { createPlayerModel } from './player/player-model';
@@ -131,7 +132,14 @@ scene.add(playerModel.group);
 const fppArms = createFirstPersonArms();
 camera.add(fppArms.group);
 scene.add(camera);
-const controller = createController(camera, body, () => fpsCamera.isLocked);
+const touchControls = createTouchControls(
+  fpsCamera,
+  (button) => {
+    // Input touch: aksi instan, tanpa gate pointer lock (mobile tidak punya).
+    performAction(button);
+  },
+);
+const controller = createController(camera, body, () => fpsCamera.isLocked, touchControls ?? undefined);
 
 const itemDrops = createItemDrops();
 scene.add(itemDrops.group);

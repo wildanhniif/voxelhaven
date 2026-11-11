@@ -41,6 +41,8 @@ export interface FpsCameraHandle {
   readonly pitch: number;
   readonly isLocked: boolean;
   readonly mode: CameraMode;
+  /** Putar kamera dari delta px layar; touch drag memakai ini. */
+  applyLook(dx: number, dy: number): void;
   dispose(): void;
 }
 /**
@@ -87,21 +89,24 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     camera.rotation.copy(new Euler(a.p, a.y, 0, 'YXZ'));
   };
 
-  const onMouseMove = (event: MouseEvent): void => {
-    if (document.pointerLockElement !== domElement) return;
+  /**
+   * Putar kamera dari delta layar (px). Dipakai mouse (movementX/Y) dan
+   * drag sentuh. TPP memutar orbit, FPP memutar badan player.
+   */
+  const applyLook = (dx: number, dy: number): void => {
     if (mode === 'FPP') {
-      yaw -= event.movementX * SENSITIVITY;
-      pitch = MathUtils.clamp(pitch - event.movementY * SENSITIVITY, -MAX_PITCH, MAX_PITCH);
+      yaw -= dx * SENSITIVITY;
+      pitch = MathUtils.clamp(pitch - dy * SENSITIVITY, -MAX_PITCH, MAX_PITCH);
     } else {
-      // TPP: mouse memutar orbit kamera, bukan badan player.
-      orbitYaw -= event.movementX * SENSITIVITY;
-      orbitPitch = MathUtils.clamp(
-        orbitPitch - event.movementY * SENSITIVITY,
-        -ORBIT_MAX_PITCH,
-        ORBIT_MAX_PITCH,
-      );
+      orbitYaw -= dx * SENSITIVITY;
+      orbitPitch = MathUtils.clamp(orbitPitch - dy * SENSITIVITY, -ORBIT_MAX_PITCH, ORBIT_MAX_PITCH);
     }
     applyRotation();
+  };
+
+  const onMouseMove = (event: MouseEvent): void => {
+    if (document.pointerLockElement !== domElement) return;
+    applyLook(event.movementX, event.movementY);
   };
 
   const onClick = (): void => {
@@ -141,6 +146,7 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     get mode() {
       return mode;
     },
+    applyLook,
     dispose() {
       domElement.removeEventListener('click', onClick);
       document.removeEventListener('mousemove', onMouseMove);

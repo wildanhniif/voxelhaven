@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [M7.1] — Kontrol sentuh mobile (gerak dasar)
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/ui/touch-controls.ts` (baru): joystick virtual kiri (gerak analog), drag di area atas untuk memutar pandangan, tombol jump/break/place. Hanya dipasang kalau `ontouchstart` ada, jadi desktop tidak terpengaruh.
+- `src/player/controller.ts`: `createController` menerima sumber input touch opsional (`move` x/z analog + `jump`); joystick aktif tanpa pointer lock karena mobile tidak punya Pointer Lock API.
+- `src/engine/camera-fps.ts`: rotasi mouse diekstrak ke `applyLook(dx, dy)` dan diekspos di `FpsCameraHandle`; touch drag memakai jalur yang sama.
+- `src/main.ts`: touch controls di-wire ke `performAction` (break/place instan) dan ke controller.
+
+### Yang BELUM / tidak dikerjakan
+- Hotbar touch (pilih slot) dan inventory mobile.
+- Repeat saat tombol break/place ditahan di touch (hanya tap tunggal).
+- Tuning sensitivitas look per perangkat.
+
+### Cara Verifikasi Manual
+1. Buka game di Chrome Android (bukan desktop mode) -> joystick, tombol jump/break/place muncul.
+2. Dorong joystick -> player bergerak; drag area atas -> kamera berputar.
+3. Tap tombol ⛏ di depan blok -> blok hancur.
+
 ## [M7] — Pohon prosedural (oak) + generasi lintas chunk
 Tanggal: 2026-11-11
 
