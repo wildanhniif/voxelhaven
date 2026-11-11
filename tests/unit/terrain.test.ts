@@ -8,6 +8,7 @@ import {
   getTreeHeight,
   heightAt,
   type TerrainConfig,
+  oakLeafTest,
 } from '../../src/world/terrain';
 const WOOD = 4;
 const LEAVES = 5;
@@ -149,45 +150,48 @@ describe('pohon prosedural', () => {
   });
 
   it('daun lintas chunk konsisten: pohon di tepi chunk muncul utuh dari kedua chunk', () => {
-    // Cari kolom pohon yang batangnya dekat tepi chunk (x lokal <= 1) sehingga
-    // tajuknya menyeberang ke chunk sebelah.
+    // Radius daun 1 blok: hanya batang di kolom tepi (lx=0 atau lx=31) yang
+    // tajuknya benar-benar menyeberang ke chunk sebelah.
     const config: TerrainConfig = { seed: 20260101, amplitude: 9, base: 12 };
     let found: { cx: number; cz: number; lx: number; lz: number } | null = null;
     for (let cx = -3; cx <= 3 && found === null; cx++) {
       for (let cz = -3; cz <= 3 && found === null; cz++) {
         for (let x = 0; x < CHUNK_SIZE && found === null; x++) {
+          if (x !== 0 && x !== CHUNK_SIZE - 1) continue;
           for (let z = 0; z < CHUNK_SIZE && found === null; z++) {
-            if (x !== 0 && x !== CHUNK_SIZE - 1) continue;
             const wx = cx * CHUNK_SIZE + x;
             const wz = cz * CHUNK_SIZE + z;
-            if (getTreeHeight(wx, wz, config) === null) continue;
-            // Pastikan tajuk benar-benar menyeberang (butuh radius 1 blok).
-            found = { cx, cz, lx: x, lz: z };
+            if (getTreeHeight(wx, wz, config) !== null) found = { cx, cz, lx: x, lz: z };
           }
         }
       }
     }
     expect(found).not.toBeNull();
     const f = found as { cx: number; cz: number; lx: number; lz: number };
-    const chunk = generateChunk(f.cx, f.cz, config);
-    const base = heightAt(f.cx * CHUNK_SIZE + f.lx, f.cz * CHUNK_SIZE + f.lz, config);
-    const th = getTreeHeight(f.cx * CHUNK_SIZE + f.lx, f.cz * CHUNK_SIZE + f.lz, config) as number;
+    const wx = f.cx * CHUNK_SIZE + f.lx;
+    const wz = f.cz * CHUNK_SIZE + f.lz;
+    const base = heightAt(wx, wz, config);
+    const th = getTreeHeight(wx, wz, config) as number;
 
-    // Kolom tepi luar (x=-1 di dunia = chunk sebelah) yang seharusnya berisi daun.
-    // Karena batang di x lokal 0, daun menyeberang ke x lokal -1 (chunk tetangga).
-    const neighborCx = f.lx === 0 ? f.cx - 1 : f.cx + 1;
+    const leftSide = f.lx === 0;
+    const neighborCx = leftSide ? f.cx - 1 : f.cx + 1;
     const neighbor = generateChunk(neighborCx, f.cz, config);
-    const neighborLx = f.lx === 0 ? CHUNK_SIZE - 1 : 0;
+    const neighborLx = leftSide ? CHUNK_SIZE - 1 : 0;
+    // Offset kolom tetangga relatif ke batang: tepat 1 di luar tepi chunk.
+    const dx = leftSide ? -1 : 1;
+
     let neighborLeaves = 0;
     for (let dy = 0; dy < 3; dy++) {
       const y = base + th + dy;
       if (y >= CHUNK_HEIGHT) continue;
-      if (neighbor.data[flatIndex(neighborLx, y, f.lz, CHUNK_SIZE)] === LEAVES) {
-        neighborLeaves++;
+      for (let dz = -1; dz <= 1; dz++) {
+        const lz = f.lz + dz;
+        if (lz < 0 || lz >= CHUNK_SIZE) continue;
+        if (!oakLeafTest(dy, dx, dz)) continue;
+        if (neighbor.data[flatIndex(neighborLx, y, lz, CHUNK_SIZE)] === LEAVES) neighborLeaves++;
       }
     }
     // Chunk tetangga harus ikut menggambar daun pohon yang batangnya di chunk ini.
     expect(neighborLeaves).toBeGreaterThan(0);
-    void chunk;
   });
 });

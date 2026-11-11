@@ -7,8 +7,12 @@ export const CHUNK_SIZE = 32;
 export const CHUNK_HEIGHT = 32;
 export const DIRT_DEPTH = 3;
 
-/** Peluang satu kolom grass punya pohon. */
-export const TREE_PROBABILITY = 0.02;
+/** Peluang satu sel grid punya pohon (lihat getTreeHeight). */
+export const TREE_PROBABILITY = 0.2;
+/** Ukuran sel grid spacing; satu sel maksimal satu pohon. */
+export const TREE_CELL = 10;
+/** Jarak minimum jitter dari tepi sel (menjaga jarak antar pohon). */
+export const TREE_MIN_GAP = 3;
 /** Jarak horizontal maksimum daun dari batang. */
 export const TREE_LEAF_RADIUS = 1;
 
@@ -80,15 +84,28 @@ function hash2d(x: number, z: number, seed: number): number {
  * Apakah (x, z) di koordinat dunia berdiri batang pohon?
  * Return tinggi batang (4..6 blok) atau null kalau tidak ada pohon.
  * Murni fungsi dunia (bukan chunk) supaya pohon konsisten lintas chunk.
+ *
+ * Spacing: dunia dibagi sel TREE_CELLxTREE_CELL, tiap sel maksimal satu pohon
+ * di posisi jitter. Tanpa ini pohon bisa berdiri bersebelahan dan tajuknya
+ * menumpuk jadi gumpalan hijau raksasa.
  */
 export function getTreeHeight(x: number, z: number, config: TerrainConfig): number | null {
-  const r = hash2d(x, z, config.seed);
-  if (r >= TREE_PROBABILITY) return null;
-  return 4 + Math.floor(hash2d(x, z, config.seed ^ 0x5f5f) * 3);
+  const cx = Math.floor(x / TREE_CELL);
+  const cz = Math.floor(z / TREE_CELL);
+  if (hash2d(cx, cz, config.seed) >= TREE_PROBABILITY) return null;
+  // Jitter dibatasi ke [TREE_MIN_GAP, TREE_CELL-TREE_MIN_GAP) per sumbu:
+  // pohon masih bisa mendarat di kolom tepi chunk (tajuk menyeberang) tapi dua
+  // pohon di sel bersebelahan tidak pernah lebih dekat dari TREE_MIN_GAP+1.
+  const jitterX = hash2d(cx, cz, config.seed ^ 0x1a1a);
+  const jitterZ = hash2d(cx, cz, config.seed ^ 0x2b2b);
+  const tx = cx * TREE_CELL + Math.floor(TREE_MIN_GAP + jitterX * (TREE_CELL - 2 * TREE_MIN_GAP));
+  const tz = cz * TREE_CELL + Math.floor(TREE_MIN_GAP + jitterZ * (TREE_CELL - 2 * TREE_MIN_GAP));
+  if (tx !== x || tz !== z) return null;
+  return 4 + Math.floor(hash2d(cx, cz, config.seed ^ 0x5f5f) * 3);
 }
 
 /** Bentuk tajuk oak sederhana relatif ke batang. dy: 0 = level bawah tajuk. */
-function oakLeafTest(dy: number, dx: number, dz: number): boolean {
+export function oakLeafTest(dy: number, dx: number, dz: number): boolean {
   const ax = Math.abs(dx);
   const az = Math.abs(dz);
   if (dy === 0) return ax <= 1 && az <= 1 && ax + az <= 2; // plus-shape tanpa sudut

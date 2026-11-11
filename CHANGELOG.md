@@ -5,7 +5,7 @@ Tanggal: 2026-11-11
 
 ### Selesai
 - `src/world/voxel.ts`: `VoxelType` diperluas — 4=Wood, 5=Leaves.
-- `src/world/terrain.ts`: `getTreeHeight(x, z, config)` — pohon deterministik per kolom dunia (hash 2D seeded, peluang 2%, tinggi batang 4-6 blok). `generateChunk` juga menempatkan daun dari pohon kolom tetangga (radius 1, lintas chunk) sehingga tajuk tidak terpotong di perbatasan chunk. Bentuk tajuk oak: lapis bawah plus-shape 3x3 tanpa sudut, tengah 3x3 penuh, puncak 1 blok.
+- `src/world/terrain.ts`: `getTreeHeight(x, z, config)` — pohon deterministik per kolom dunia (hash 2D seeded, sel grid 10x10 dengan jitter, peluang sel 20%, tinggi batang 4-6 blok; jarak minimum antar pohon ~7 blok). `generateChunk` juga menempatkan daun dari pohon kolom tetangga (radius 1, lintas chunk) sehingga tajuk tidak terpotong di perbatasan chunk. Bentuk tajuk oak: lapis bawah plus-shape 3x3 tanpa sudut, tengah 3x3 penuh, puncak 1 blok.
 - `src/world/texture-atlas.ts`: atlas 2x2 -> 3x3; tile baru `woodTop`, `woodSide`, `leaves` (procedural, NearestFilter).
 - `src/world/mesher.ts`: `BLOCK_COLORS` + `TILES` untuk Wood (atas/bawah beda dengan sisi) dan Leaves (solid, belum transparan).
 - `src/ui/hotbar.ts` + `src/ui/block-names.ts`: nama + ikon isometric blok baru (muncul saat item Wood/Leaves masuk inventory lewat tebang).
@@ -17,7 +17,7 @@ Tanggal: 2026-11-11
 ### Risiko / Tech Debt
 - Scan daun per kolom (9 kolom kandidat) menambah biaya generateChunk; masih 1 chunk/frame, tidak ada spike terasa.
 - `getTreeHeight` dipanggil berulang untuk kolom yang sama saat scan tetangga; bisa di-cache per (x,z) jika terasa lambat.
-- Pohon bisa tumbuh berdekatan/overlap (tanpa spacing); visual masih wajar.
+- Jarak minimum antar pohon ~7 blok (TREE_MIN_GAP=3, TREE_CELL=10) membatasi kepadatan ~2 pohon/chunk; kalau terasa terlalu jarang tinggalkan TREE_PROBABILITY=0.2.
 
 ### Cara Verifikasi Manual
 1. `npm run dev` -> muncul pohon oak: batang Wood (sisi beda dengan atas) + tajuk Leaves.
