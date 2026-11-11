@@ -11,7 +11,8 @@ import { raycastVoxel, type Vec3 } from './player/raycast';
 
 const SPAWN = { x: 16, y: 4, z: 16 } as const;
 const REACH = 6;
-const CLICK_DEBOUNCE_MS = 200;
+/** Aksi pertama instan; repeat hanya saat tombol ditahan (Minecraft: ~4 blok/detik). */
+const REPEAT_INTERVAL_MS = 200;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -46,7 +47,8 @@ const body = createPlayerBody(SPAWN.x, SPAWN.y, SPAWN.z);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
 
 let target: Vec3 | null = null;
-let lastClickAt = -CLICK_DEBOUNCE_MS;
+let heldButton = -1;
+let nextRepeatAt = 0;
 
 function playerBounds(): PlayerBounds {
   return { x: body.x, y: body.y, z: body.z };
@@ -54,37 +56,65 @@ function playerBounds(): PlayerBounds {
 
 function raycastFromCamera(): Vec3 | null {
   camera.getWorldDirection(dirScratch);
-  const origin: Vec3 = [camera.position.x, camera.position.y, camera.position.z];
-  const direction: Vec3 = [dirScratch.x, dirScratch.y, dirScratch.z];
-  const hit = raycastVoxel(origin, direction, REACH, chunk);
+  const hit = raycastVoxel(
+    [camera.position.x, camera.position.y, camera.position.z],
+    [dirScratch.x, dirScratch.y, dirScratch.z],
+    REACH,
+    chunk,
+  );
   return hit === null ? null : hit.adjacent;
 }
 
-// Edit blok membangun ulang seluruh mesh chunk (32^3 sel, ~10-20 ms sekali klik).
+// Satu edit = rebuild seluruh mesh chunk; cukup untuk skala 1 chunk.
 function rebuildWorld(): void {
   worldMesh.geometry.dispose();
   worldMesh.geometry = buildChunkGeometry(chunk);
 }
 
-function onMouseDown(event: MouseEvent): void {
-  if (!fpsCamera.isLocked || target === null) return;
-  const now = performance.now();
-  if (now - lastClickAt < CLICK_DEBOUNCE_MS) return;
-  lastClickAt = now;
+function breakAtCursor(): void {
+  camera.getWorldDirection(dirScratch);
+  const hit = raycastVoxel(
+    [camera.position.x, camera.position.y, camera.position.z],
+    [dirScratch.x, dirScratch.y, dirScratch.z],
+    REACH,
+    chunk,
+  );
+  if (hit !== null && breakBlock(hit.block, chunk)) rebuildWorld();
+}
 
-  if (event.button === 0) {
-    // Blok yang di-target = sel tetangga dari adjacent, retrace untuk dapat blok aslinya.
-    camera.getWorldDirection(dirScratch);
-    const hit = raycastVoxel(
-      [camera.position.x, camera.position.y, camera.position.z],
-      [dirScratch.x, dirScratch.y, dirScratch.z],
-      REACH,
-      chunk,
-    );
-    if (hit !== null && breakBlock(hit.block, chunk)) rebuildWorld();
-  } else if (event.button === 2) {
-    if (placeBlock(target, 1, chunk, playerBounds())) rebuildWorld();
-  }
+function placeAtCursor(): void {
+  if (target === null) return;
+  if (placeBlock(target, 1, chunk, playerBounds())) rebuildWorld();
+}
+
+/** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
+function performAction(button: number): void {
+  if (button === 0) breakAtCursor();
+  else if (button === 2) placeAtCursor();
+}
+
+function onMouseDown(event: MouseEvent): void {
+  if (!fpsCamera.isLocked) return;
+  if (event.button !== 0 && event.button !== 2) return;
+  heldButton = event.button;
+  performAction(heldButton);
+  nextRepeatAt = performance.now() + REPEAT_INTERVAL_MS;
+}
+
+function onMouseUp(): void {
+  heldButton = -1;
+}
+
+function onBlur(): void {
+  heldButton = -1;
+}
+
+/** Repeat saat tombol ditahan, dijalankan dari loop render (tidak ada timer terpisah). */
+function updateHeldAction(now: number): void {
+  if (heldButton === -1 || !fpsCamera.isLocked) return;
+  if (now < nextRepeatAt) return;
+  performAction(heldButton);
+  nextRepeatAt = now + REPEAT_INTERVAL_MS;
 }
 
 const onContextMenu = (event: MouseEvent): void => event.preventDefault();
@@ -104,12 +134,16 @@ const loop = startLoop(({ elapsed, delta }) => {
     highlight.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
   }
 
+  updateHeldAction(performance.now());
+
   renderer.render(scene, camera);
   onFps(elapsed);
 });
 
 document.addEventListener('mousedown', onMouseDown);
+document.addEventListener('mouseup', onMouseUp);
 document.addEventListener('contextmenu', onContextMenu);
+window.addEventListener('blur', onBlur);
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -122,7 +156,9 @@ window.addEventListener('beforeunload', () => {
   controller.dispose();
   fpsCamera.dispose();
   document.removeEventListener('mousedown', onMouseDown);
+  document.removeEventListener('mouseup', onMouseUp);
   document.removeEventListener('contextmenu', onContextMenu);
+  window.removeEventListener('blur', onBlur);
   highlight.geometry.dispose();
   (highlight.material as THREE.LineBasicMaterial).dispose();
 });
