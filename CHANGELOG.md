@@ -12,6 +12,19 @@ Tanggal: 2026-11-11
 2. Pilih slot grass → blok grass bertekstur di tangan kanan model.
 3. Ganti slot → blok berganti; slot tangan kosong → tangan kosong.
 
+## [M6.5.7] — Tangan 3D, muka lebih bagus, orbit kamera TPP 360 derajat
+Tanggal: 2026-11-11
+
+### Selesai
+- FPP arms: sleeve (baju) + forearm (kulit) + hand (kulit pipih) + jari + ibu jari → keliatan 3D.
+- Player model (muka TPP): mata putih+pupil hitam+mulut coklat; tangan: lengan atas (baju) + forearm + hand kulit di ujung bawah.
+- TPP orbit 360 derajat: mouse di TPP mode memutar orbit kamera tanpa mengubah arah hadap player. Player diam menghadap yaw awal; kamera bisa dilihat dari sudut mana pun (depan, samping, atas, dll).
+
+### Cara Verifikasi Manual
+1. FPP: tangan kanan/kiri terlihat bersegmen (sleeve+baju, forearm+kulit, jari+jari).
+2. Pilih slot grass → blok rumput bertekstur di tangan.
+3. Tekan F5 -> TPP. Gerakkan mouse: kamera berputar mengelilingi player (360). Player diam, bisa lihat muka dari depan.
+
 ## [M6.5.6] — Fix TPP depan: kamera kini benar-benar tampak muka
 Tanggal: 2026-11-11
 

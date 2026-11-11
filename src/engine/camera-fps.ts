@@ -30,9 +30,14 @@ export function tppCameraDistance(
   return maxDistance;
 }
 
+
 export interface FpsCameraHandle {
   readonly camera: PerspectiveCamera;
   readonly yaw: number;
+  /** Yaw render kamera (termasuk offset orbit TPP). */
+  readonly viewYaw: number;
+  /** Pitch render kamera (termasuk offset orbit TPP). */
+  readonly viewPitch: number;
   readonly pitch: number;
   readonly isLocked: boolean;
   readonly mode: CameraMode;
@@ -47,6 +52,11 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
   let mode: CameraMode = 'FPP';
   let yaw = 0;
   let pitch = 0;
+  // Orbit TPP: offset dari yaw/pitch player, bisa diputar 360° penuh
+  // supaya player bisa dilihat dari sudut mana pun tanpa memutar badannya.
+  const ORBIT_MAX_PITCH = MathUtils.degToRad(85);
+  let orbitYaw = 0;
+  let orbitPitch = 0;
 
   const onKey = (event: KeyboardEvent): void => {
     if (event.code !== 'F5') return;
@@ -54,22 +64,43 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     event.preventDefault();
     // FPP -> TPP belakang -> TPP depan (lihat muka) -> FPP.
     mode = mode === 'FPP' ? 'TPP' : mode === 'TPP' ? 'TPP_FRONT' : 'FPP';
+    orbitYaw = 0;
+    orbitPitch = 0;
     applyRotation();
   };
+
+  /**
+   * Sudut kamera untuk render. FPP mengikuti player. TPP: player tetap
+   * menghadap yaw-nya, kamera mengorbit. TPP_FRONT menghadap balik.
+   */
+  const viewAngles = (): { y: number; p: number } => {
+    if (mode === 'FPP') return { y: yaw, p: pitch };
+    const front = mode === 'TPP_FRONT' ? Math.PI : 0;
+    return {
+      y: yaw + orbitYaw + front,
+      p: mode === 'TPP_FRONT' ? -pitch : pitch + orbitPitch,
+    };
+  };
+
   const applyRotation = (): void => {
-    // TPP_FRONT: kamera di depan player dan harus melihat ke arah player,
-    // jadi arah pandang dibalik (yaw+180°, pitch terbalik).
-    if (mode === 'TPP_FRONT') {
-      camera.rotation.copy(new Euler(-pitch, yaw + Math.PI, 0, 'YXZ'));
-    } else {
-      camera.rotation.copy(new Euler(pitch, yaw, 0, 'YXZ'));
-    }
-  }
+    const a = viewAngles();
+    camera.rotation.copy(new Euler(a.p, a.y, 0, 'YXZ'));
+  };
 
   const onMouseMove = (event: MouseEvent): void => {
     if (document.pointerLockElement !== domElement) return;
-    yaw -= event.movementX * SENSITIVITY;
-    pitch = MathUtils.clamp(pitch - event.movementY * SENSITIVITY, -MAX_PITCH, MAX_PITCH);
+    if (mode === 'FPP') {
+      yaw -= event.movementX * SENSITIVITY;
+      pitch = MathUtils.clamp(pitch - event.movementY * SENSITIVITY, -MAX_PITCH, MAX_PITCH);
+    } else {
+      // TPP: mouse memutar orbit kamera, bukan badan player.
+      orbitYaw -= event.movementX * SENSITIVITY;
+      orbitPitch = MathUtils.clamp(
+        orbitPitch - event.movementY * SENSITIVITY,
+        -ORBIT_MAX_PITCH,
+        ORBIT_MAX_PITCH,
+      );
+    }
     applyRotation();
   };
 
@@ -100,6 +131,12 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     },
     get isLocked() {
       return document.pointerLockElement === domElement;
+    },
+    get viewYaw() {
+      return viewAngles().y;
+    },
+    get viewPitch() {
+      return viewAngles().p;
     },
     get mode() {
       return mode;

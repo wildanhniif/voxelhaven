@@ -45,20 +45,46 @@ export function createFirstPersonArms(): FirstPersonArmsHandle {
   const skin = 0xd7a558;
   const shirt = 0x2b6cd4;
 
+  /**
+   * Lengan bersegmen: sleeve -> forearm kulit -> tangan -> jari + ibu jari.
+   * Dibongkar dari satu kotak biar kelihatan 3D, bukan balok datar.
+   */
   function buildArm(side: 1 | -1): Group {
     const pivot = new Group();
-    // Sleeve (dekat kamera) + tangan (ujung jauh).
+    const parts: Mesh[] = [];
+
     const sleeve = armMesh(shirt);
-    sleeve.scale.set(1.15, 1.15, 0.45);
-    sleeve.position.z = -0.08;
+    sleeve.scale.set(1.05, 1.05, 0.52); // 0.26 panjang
+    sleeve.position.z = -0.05;
+    parts.push(sleeve);
+
+    const forearm = armMesh(skin);
+    forearm.scale.set(0.95, 0.95, 0.4); // 0.2 panjang
+    forearm.position.z = -0.28;
+    parts.push(forearm);
+
     const hand = armMesh(skin);
-    hand.position.z = -0.36;
-    pivot.add(sleeve, hand);
+    hand.scale.set(1, 0.75, 0.24); // pipih ke bawah
+    hand.position.z = -0.42;
+    parts.push(hand);
+
+    // Jari: kecil, sedikit turun dari telapak.
+    const fingers = armMesh(skin);
+    fingers.scale.set(0.9, 0.5, 0.12);
+    fingers.position.set(0, -0.025, -0.5);
+    parts.push(fingers);
+
+    // Ibu jari di sisi dalam (arah tengah layar).
+    const thumb = armMesh(skin);
+    thumb.scale.set(0.3, 0.4, 0.14);
+    thumb.position.set(-side * 0.075, 0.005, -0.45);
+    parts.push(thumb);
+
+    pivot.add(...parts);
     pivot.rotation.y = side * 0.22;
     pivot.position.set(side * BASE_POS_X, BASE_POS_Y, BASE_POS_Z);
     pivot.renderOrder = 999;
-    sleeve.renderOrder = 999;
-    hand.renderOrder = 999;
+    for (const p of parts) p.renderOrder = 999;
     return pivot;
   }
 

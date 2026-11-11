@@ -36,6 +36,13 @@ function limb(w: number, h: number, d: number, color: number): Group {
   return pivot;
 }
 
+/** Tempel hand (warna kulit) di ujung bawah lengan supaya tidak kaku. */
+function addHand(arm: Group): void {
+  const hand = part(0.16, 0.14, 0.24, 0xd7a558);
+  hand.position.y = -0.28;
+  arm.add(hand);
+}
+
 /**
  * Model player kotak-kotak (2 kaki, badan, 2 tangan, kepala) warna solid,
  * plus mata supaya muka terlihat. Diposisikan di kaki player, menghadap yaw.
@@ -48,25 +55,42 @@ export function createPlayerModel(): PlayerModelHandle {
   const shirt = 0x2b6cd4;
   const pants = 0x3a3f4a;
 
-  // Kepala + wajah: mata hitam kecil menghadap -Z (arah pandang player).
+  // Kepala + wajah: mata putih + pupil hitam + mulut, menghadap -Z.
   const head = part(0.45, 0.45, 0.45, skin);
   head.position.set(0, 1.575, 0);
-  const eyeL = new Mesh(new BoxGeometry(0.06, 0.06, 0.02), new MeshLambertMaterial({ color: 0x111111 }));
-  eyeL.position.set(-0.11, 0.05, -0.23);
-  const eyeR = eyeL.clone();
-  eyeR.position.x = 0.11;
-  head.add(eyeL, eyeR);
+  const eyeWhite = new Mesh(
+    new BoxGeometry(0.1, 0.08, 0.02),
+    new MeshLambertMaterial({ color: 0xffffff }),
+  );
+  const pupil = new Mesh(
+    new BoxGeometry(0.04, 0.04, 0.02),
+    new MeshLambertMaterial({ color: 0x111111 }),
+  );
+  pupil.position.z = -0.011;
+  eyeWhite.add(pupil);
+  const eyeL = eyeWhite.clone();
+  eyeL.position.set(-0.1, 0.05, -0.23);
+  const eyeR = eyeWhite.clone();
+  eyeR.position.set(0.1, 0.05, -0.23);
+  const mouth = new Mesh(
+    new BoxGeometry(0.16, 0.03, 0.02),
+    new MeshLambertMaterial({ color: 0x8b5a3c }),
+  );
+  mouth.position.set(0, -0.12, -0.23);
+  head.add(eyeL, eyeR, mouth);
   group.add(head);
 
   const torso = part(0.5, 0.55, 0.25, shirt);
   torso.position.set(0, 1.075, 0);
   group.add(torso);
 
-  // Tangan: pivot di bahu (y = 1.35).
+  // Tangan: pivot di bahu; forearm + hand skin supaya lebih 3D.
   const armL = limb(0.16, 0.55, 0.25, shirt);
   armL.position.set(-0.33, 1.35, 0);
   const armR = limb(0.16, 0.55, 0.25, shirt);
   armR.position.set(0.33, 1.35, 0);
+  addHand(armL);
+  addHand(armR);
   group.add(armL, armR);
 
   // Kaki: pivot di panggul (y = 0.8).
