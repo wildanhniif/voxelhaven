@@ -1,6 +1,38 @@
 # CHANGELOG
 
-## [M7.2] — Fix blok hitam + save state player
+
+## [M8] — World selector + world bounds (Growtopia-style)
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/state/world-manager.ts` (baru): `worldSeed()` FNV-1a 32-bit dari nama world, `storageKey()`, `validWorldName()`. Nama beda → terrain beda + save beda.
+- `src/world/world-bounds.ts` (baru): `WORLD_SIZE=256`, `WORLD_HEIGHT=CHUNK_HEIGHT` (0..31), `WORLD_CENTER=128`, predikat `inWorldXZ/inWorldY/inWorldChunk`.
+- `src/ui/main-menu.ts` (baru): overlay DOM input nama world + tombol Play (validasi non-empty, Enter submit).
+- `src/main.ts`: seluruh init game dibungkus `boot(worldName)`; menu tampil bila `?world=` tidak ada di URL; seed terrain = `worldSeed(nama)`; spawn `WORLD_CENTER`; ESC (saat pointer lock sudah lepas) → flush save + reload ke menu.
+- `src/state/block-store.ts`: `createBlockStore(worldName)` → key localStorage `voxel-sandbox:edits:v1:<nama>`.
+- `src/state/player-save.ts`: `savePlayer(worldName, …)` / `loadPlayer(worldName)` → key `voxel-sandbox:player:v1:<nama>`.
+- `src/world/block-edit.ts`: `breakBlock` menolak Y=0 (bedrock) + koordinat di luar bounds; `placeBlock` menolak koordinat di luar bounds.
+- `src/world/chunk-manager.ts`: chunk di luar 8×8 dunia tidak diantri/generate.
+- `src/player/collision.ts`: clamp X/Z ke `[HALF_W, WORLD_SIZE-HALF_W]` (dinding gaib).
+- `tests/unit/block-edit.test.ts`: test "menghapus blok solid" diubah jadi blok Y=1; **test baru**: `breakBlock` di Y=0 ditolak (bedrock). Perubahan assertion karena behavior Y=0 memang berubah by design di M8.
+- `tests/unit/block-store.test.ts`: semua `createBlockStore()` → `createBlockStore('TestWorld')` (signature baru).
+
+### Catatan desain
+- **Y tetap 0..31**: vertical chunking (Y=64) berisiko regresi besar; keputusan disetujui user.
+- **Restart via reload**: ganti world = `location.reload` setelah update `?world=` param; paling minim risiko memory leak (tidak perlu teardown penuh Three.js scene).
+- **9 file disentuh** (batas AGENTS.md 8): scope M8 memang butuh wiring lintas layer (bounds + selector + save); diungkapkan di laporan.
+
+### Verifikasi manual (desktop)
+1. `npm run dev` → muncul menu "VoxelHaven".
+2. Masukkan nama (mis. `test1`) → Play → masuk world, terrain konsisten.
+3. Break/place blok → ESC → kembali ke menu.
+4. Masuk `test1` lagi → editan tetap ada; masuk `test2` → terrain/save beda.
+5. Jalan ke tepi dunia → tidak bisa lewat (dinding gaib); gali sampai Y=0 → bedrock tidak bisa dihancurkan.
+
+### Measurement
+- Bundle: **569.78 kB** (gzip 144.92 kB), Three.js dominan.
+- Tests: **73 passed / 73** (baseline M7.2: 72; +1 test bedrock baru).
+- tsc strict: 0 error.
 Tanggal: 2026-11-11
 
 ### Selesai

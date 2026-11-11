@@ -3,7 +3,7 @@
  * Terpisah dari block-store supaya kegagalan parse satu bagian tidak
  * mengorbankan bagian lain.
  */
-const KEY = 'voxel-sandbox:player:v1';
+const KEY_BASE = 'voxel-sandbox:player:v1';
 
 export interface PlayerSave {
   x: number;
@@ -14,16 +14,16 @@ export interface PlayerSave {
   active: number;
 }
 
-export function savePlayer(state: PlayerSave): void {
+export function savePlayer(worldName: string, state: PlayerSave): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(`${KEY_BASE}:${worldName}`, JSON.stringify(state));
   } catch {
     // Quota penuh/disk penuh: abaikan, game tetap jalan di sesi ini.
   }
 }
 
-export function loadPlayer(): PlayerSave | null {
-  const raw = localStorage.getItem(KEY);
+export function loadPlayer(worldName: string): PlayerSave | null {
+  const raw = localStorage.getItem(`${KEY_BASE}:${worldName}`);
   if (raw === null) return null;
   try {
     const parsed: unknown = JSON.parse(raw);

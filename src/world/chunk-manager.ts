@@ -1,6 +1,7 @@
 import type { BlockSource, BlockPos, VoxelType } from '../world/voxel';
 import { flatIndex, VOXEL_AIR } from '../world/voxel';
 import { CHUNK_SIZE, generateChunk, type Chunk, type TerrainConfig } from './terrain';
+import { inWorldChunk } from './world-bounds';
 
 export const LOAD_RADIUS = 4;
 export const UNLOAD_RADIUS = 6;
@@ -86,6 +87,7 @@ export class ChunkManager implements BlockSource {
     this.queue.length = 0;
     for (let dz = -LOAD_RADIUS; dz <= LOAD_RADIUS; dz++) {
       for (let dx = -LOAD_RADIUS; dx <= LOAD_RADIUS; dx++) {
+        if (!inWorldChunk(pcx + dx, pcz + dz)) continue;
         if (!this.chunks.has(key(pcx + dx, pcz + dz))) {
           this.queue.push({ cx: pcx + dx, cz: pcz + dz, dist: dx * dx + dz * dz });
         }

@@ -1,4 +1,5 @@
 import { VOXEL_AIR, type BlockPos, type BlockSource, type VoxelType } from './voxel';
+import { inWorldXZ, inWorldY } from './world-bounds';
 
 export interface PlayerBounds {
   x: number;
@@ -32,6 +33,10 @@ export function overlapsPlayer(
 
 /** Hancur blok di posisi pos; true kalau ada yang berubah. */
 export function breakBlock(pos: BlockPos, world: BlockSource): boolean {
+  const [x, y, z] = pos;
+  // Y=0 = bedrock: tidak bisa dihancurkan, mencegah player jatuh ke void.
+  if (y === 0) return false;
+  if (!inWorldXZ(x, z) || !inWorldY(y)) return false;
   if (world.getBlock(pos) === VOXEL_AIR) return false;
   return world.setBlock(pos, VOXEL_AIR);
 }
@@ -49,6 +54,7 @@ export function placeBlock(
   player?: PlayerBounds,
 ): boolean {
   const [x, y, z] = pos;
+  if (!inWorldXZ(x, z) || !inWorldY(y)) return false;
   if (type === VOXEL_AIR) return false;
   if (world.getBlock(pos) !== VOXEL_AIR) return false;
   if (player !== undefined && overlapsPlayer(x, y, z, player)) return false;

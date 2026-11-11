@@ -18,19 +18,19 @@ describe('block-store', () => {
   });
 
   it('recordEdit lalu getEdit mengembalikan tipe blok', () => {
-    const store = createBlockStore();
+    const store = createBlockStore('TestWorld');
     store.recordEdit([1, 2, 3], 1);
     expect(store.getEdit([1, 2, 3])).toBe(1);
     expect(store.size).toBe(1);
   });
 
   it('getEdit pada posisi yang belum diedit: null', () => {
-    const store = createBlockStore();
+    const store = createBlockStore('TestWorld');
     expect(store.getEdit([9, 9, 9])).toBeNull();
   });
 
   it('overwrite: edit kedua pada posisi sama menimpa yang pertama', () => {
-    const store = createBlockStore();
+    const store = createBlockStore('TestWorld');
     store.recordEdit([4, 5, 6], 1);
     store.recordEdit([4, 5, 6], 0);
     expect(store.getEdit([4, 5, 6])).toBe(0);
@@ -38,7 +38,7 @@ describe('block-store', () => {
   });
 
   it('clearEdits menghapus semua edit termasuk dari localStorage', () => {
-    const store = createBlockStore();
+    const store = createBlockStore('TestWorld');
     store.recordEdit([1, 1, 1], 3);
     store.flush();
     store.clearEdits();
@@ -46,21 +46,21 @@ describe('block-store', () => {
     expect(store.getEdit([1, 1, 1])).toBeNull();
 
     // Store baru membaca dari localStorage yang sudah bersih.
-    const fresh = createBlockStore();
+    const fresh = createBlockStore('TestWorld');
     expect(fresh.size).toBe(0);
   });
 
   it('persist: edit terbaca lagi oleh store baru setelah flush', () => {
-    const store = createBlockStore();
+    const store = createBlockStore('TestWorld');
     store.recordEdit([7, 2, -3], 2);
     store.flush();
 
-    const fresh = createBlockStore();
+    const fresh = createBlockStore('TestWorld');
     expect(fresh.getEdit([7, 2, -3])).toBe(2);
   });
 
   it('editsInChunk hanya mengembalikan edit di chunk yang diminta', () => {
-    const store = createBlockStore();
+    const store = createBlockStore('TestWorld');
     store.recordEdit([5, 10, 5], 1); // chunk (0,0), size 32
     store.recordEdit([40, 10, 5], 2); // chunk (1,0)
     store.recordEdit([5, 10, 70], 0); // chunk (0,2)

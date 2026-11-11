@@ -1,4 +1,5 @@
 import type { BlockPos, BlockSource } from '../world/voxel';
+import { WORLD_SIZE } from '../world/world-bounds';
 import { GRAVITY } from './constants';
 
 export const PLAYER_WIDTH = 0.6;
@@ -49,8 +50,11 @@ function collides(px: number, py: number, pz: number, world: BlockSource): boole
 export function updatePhysics(body: PlayerBody, delta: number, world: BlockSource): void {
   const dt = Math.min(delta, 0.05); // clamp agar tabrakan tetap stabil saat frame drop
 
-  // X
-  const nextX = body.x + body.vx * dt;
+  // Dinding gaib di tepi dunia: clamp AABB supaya player tidak bisa keluar
+  // ke area tanpa chunk (yang akan terbaca sebagai udara lalu jatuh).
+  const minX = HALF_W;
+  const maxX = WORLD_SIZE - HALF_W;
+  const nextX = Math.min(Math.max(body.x + body.vx * dt, minX), maxX);
   if (!collides(nextX, body.y, body.z, world)) {
     body.x = nextX;
   } else {
@@ -58,12 +62,13 @@ export function updatePhysics(body: PlayerBody, delta: number, world: BlockSourc
   }
 
   // Z
-  const nextZ = body.z + body.vz * dt;
+  const nextZ = Math.min(Math.max(body.z + body.vz * dt, minX), maxX);
   if (!collides(body.x, body.y, nextZ, world)) {
     body.z = nextZ;
   } else {
     body.vz = 0;
   }
+
 
   // Y
   body.vy = Math.max(body.vy - GRAVITY * dt, -TERMINAL_VELOCITY);

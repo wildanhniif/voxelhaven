@@ -17,10 +17,16 @@ function makeWorld(solid: (x: number, y: number, z: number) => boolean): VoxelWo
 }
 
 describe('block-edit', () => {
-  it('breakBlock menghapus blok solid', () => {
+  it('breakBlock menghapus blok solid di atas bedrock', () => {
+    const world = makeWorld((_x, y) => y <= 1);
+    expect(breakBlock([16, 1, 16], asBlockSource(world))).toBe(true);
+    expect(getBlock([16, 1, 16], world)).toBe(0);
+  });
+
+  it('breakBlock di Y=0 (bedrock) ditolak', () => {
     const world = makeWorld((_x, y) => y === 0);
-    expect(breakBlock([16, 0, 16], asBlockSource(world))).toBe(true);
-    expect(getBlock([16, 0, 16], world)).toBe(0);
+    expect(breakBlock([16, 0, 16], asBlockSource(world))).toBe(false);
+    expect(getBlock([16, 0, 16], world)).toBe(1);
   });
 
   it('breakBlock pada blok kosong: false, tidak ada perubahan', () => {

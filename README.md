@@ -3,7 +3,7 @@
 Clone Minecraft berbasis web. Voxel 3D, kamera FPS, hancur/taruh blok.
 
 ## Status
-M7.2 selesai: fix blok hitam (vertex color terkalikan dua), pohon lebih jarang, save state player (posisi + inventory, autosave 10s). Lihat `CHANGELOG.md`.
+M8 selesai: world selector (menu input nama + seed dari nama) + world bounds (bedrock Y=0, dinding gaib X/Z, spawn tengah). measurement: 569.8 kB bundle, 73 tests. Lihat `CHANGELOG.md`.
 
 ## Cara Menjalankan
 ```bash
@@ -16,7 +16,7 @@ Buka http://localhost:5173
 | Input | Aksi |
 | --- | --- |
 | Klik kanvas | Aktifkan pointer lock (mouse menggerakkan kamera) |
-| ESC | Lepas pointer lock |
+| ESC | Lepas pointer lock; saat sudah lepas: keluar world → menu |
 | Mouse | Lihat sekeliling (pitch dibatasi ±89°) |
 | W / A / S / D | Jalan (5 m/s) |
 | Space | Lompat (~1.25 blok) |
@@ -32,15 +32,22 @@ Blok yang dihancurkan jadi item di tanah dan otomatis masuk hotbar saat kamu men
 (jarak ±1 blok). Hotbar menampilkan jumlah per slot (maks 64/slot); slot kosong tampak gelap.
 Taruh blok mengurangi jumlah; kalau 0, taruh dibatalkan.
 
-## Save System
-Semua blok yang kamu hancurkan/taruh disimpan sebagai delta di localStorage
-(key `voxel-sandbox:edits:v1`), bukan snapshot world. Terrain di-regenerate
-deterministik dari noise, lalu edit diterapkan di atasnya. Akibatnya:
+## World & Save System
+Game punya **world selector**: saat pertama buka, muncul menu untuk memasukkan nama world.
+Nama world menentukan:
+- **Terrain**: seed = hash FNV-1a(nama) → nama beda = terrain beda.
+- **Edit blok**: key `voxel-sandbox:edits:v1:<nama>` di localStorage.
+- **State player**: key `voxel-sandbox:player:v1:<nama>` (posisi + inventory).
 
-- Chunk yang di-unload dan dimuat ulang tetap membawa editanmu.
-- Refresh browser (F5) tidak menghilangkan editan.
-- Backspace menghapus semua edit (reset ke terrain polos).
-- Yang TIDAK disimpan (by design): inventory, posisi player.
+Edit disimpan sebagai delta di atas terrain deterministik, bukan snapshot world.
+Chunk yang di-unload dan dimuat ulang tetap membawa editanmu. Backspace menghapus
+semua edit **world aktif saja**.
+
+**World bounds**: dunia 256×256 blok (8×8 chunk), tinggi Y=0..31.
+Y=0 adalah bedrock yang tidak bisa dihancurkan; dinding gaib di tepi X/Z mencegah
+player keluar ke area tanpa chunk. Spawn di tengah dunia (128,128).
+
+**Ganti world**: ESC saat pointer lock sudah lepas → save otomatis lalu kembali ke menu.
 
 ## Struktur relevan
 - `src/world/voxel.ts` → tipe blok + `BlockSource` (interface koordinat dunia)
@@ -57,7 +64,9 @@ deterministik dari noise, lalu edit diterapkan di atasnya. Akibatnya:
 - `src/entity/item-drop.ts` → entity item drop: fisika jatuh, putar/bobbing, pickup radius
 - `src/ui/hotbar.ts` → render hotbar DOM + badge count + nama blok
 - `src/ui/touch-controls.ts` → joystick virtual + drag look + tombol aksi (mobile)
-- `src/state/player-save.ts` → persist posisi + inventory ke localStorage (autosave 10s)
+- `src/state/world-manager.ts` → seed deterministik dari nama world + key localStorage per world
+- `src/world/world-bounds.ts` → konstanta batas dunia (256×256, Y 0..31) + predikat bounds
+- `src/ui/main-menu.ts` → overlay menu: input nama world + tombol Play
 
 ## Roadmap
 Lihat AGENTS.md dan CHANGELOG.md.

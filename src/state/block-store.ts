@@ -1,6 +1,6 @@
 import type { BlockPos, VoxelType } from '../world/voxel';
 
-const STORAGE_KEY = 'voxel-sandbox:edits:v1';
+import { storageKey } from './world-manager';
 
 /** Log edit blok (delta vs terrain noise) dengan persistence localStorage. */
 export interface BlockStore {
@@ -33,17 +33,18 @@ function parseKey(key: string): BlockPos | null {
  */
 const FLUSH_THRESHOLD = 20;
 
-export function createBlockStore(): BlockStore {
+export function createBlockStore(worldName: string): BlockStore {
+  // Save dipisah per world: nama world jadi suffix key localStorage.
+  const key = storageKey(worldName);
   const edits = new Map<string, VoxelType>();
   let dirty = 0;
-
   const flush = (): void => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...edits]));
+    localStorage.setItem(key, JSON.stringify([...edits]));
     dirty = 0;
   };
 
   const restore = (): void => {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw === null) return;
     try {
       const parsed: unknown = JSON.parse(raw);
@@ -60,7 +61,7 @@ export function createBlockStore(): BlockStore {
       }
     } catch {
       // Data korup: anggap kosong, edit berikutnya akan menimpa.
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(key);
     }
   };
 
@@ -92,7 +93,7 @@ export function createBlockStore(): BlockStore {
 
     clearEdits() {
       edits.clear();
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(key);
       dirty = 0;
     },
 
