@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [M6.3.1] — Tangan mengikuti pitch kamera
+Tanggal: 2026-11-11
+
+### Selesai
+- src/player/player-model.ts: tangan diberi pose dasar diangkat ke depan (ARM_FORWARD 0.55 rad) dan offset mengikuti pitch kamera (x0.8): lihat ke bawah → tangan turun, lihat ke atas → tangan terangkat.
+- Pitch kamera disimpan di update() lalu dipakai animate(), jadi arah tangan konsisten dengan pandangan.
+
+### Cara Verifikasi Manual
+1. FPP: lihat lurus ke bawah → kedua tangan turun mengikuti pandangan; lihat ke atas (langit) → tangan terangkat.
+2. Jalan + klik: ayunan kaki/tangan tetap jalan dan tidak bertabrakan dengan offset pitch.
+
 ## [M6.3] — FPP pakai model player asli (kamera di kepala)
 Tanggal: 2026-11-11
 

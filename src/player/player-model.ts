@@ -1,5 +1,8 @@
 import { BoxGeometry, Group, Mesh, MeshLambertMaterial, type Material } from 'three';
 
+/** Pose dasar tangan: sedikit diangkat ke depan (radian), biar gak menggantung kaku. */
+const ARM_FORWARD = 0.55;
+
 export interface PlayerModelHandle {
   readonly group: Group;
   /** Sinkron posisi/rotasi ke body player + arah pandang kamera. */
@@ -68,24 +71,28 @@ export function createPlayerModel(): PlayerModelHandle {
   legR.position.set(0.13, 0.8, 0);
   group.add(legL, legR);
 
+  let pitch = 0;
   let elapsed = 0;
   let swingT = -1; // -1 = idle, 0..1 = sedang mengayun tangan kanan
   const SWING_DURATION = 0.25;
 
   return {
     group,
-    update(pos, yaw, pitch) {
+    update(pos, yaw, camPitch) {
       group.position.set(pos.x, pos.y, pos.z);
       group.rotation.y = yaw;
-      head.rotation.x = pitch; // kepala ikut lihat atas/bawah
+      head.rotation.x = camPitch; // kepala ikut lihat atas/bawah
+      pitch = camPitch;
     },
     animate(delta, walking) {
       elapsed += delta;
       const ph = Math.sin(elapsed * 8) * (walking ? 0.5 : 0);
       legL.rotation.x = ph;
       legR.rotation.x = -ph;
-      armL.rotation.x = -ph * 0.6;
-      armR.rotation.x = ph * 0.6;
+      // Tangan diangkat ke depan + mengikuti pitch kamera:
+      // lihat bawah → tangan turun, lihat atas → tangan naik.
+      armL.rotation.x = ARM_FORWARD - ph * 0.6 + pitch * 0.8;
+      armR.rotation.x = ARM_FORWARD + ph * 0.6 + pitch * 0.8;
       if (swingT >= 0) {
         swingT += delta / SWING_DURATION;
         if (swingT > 1) swingT = -1;
