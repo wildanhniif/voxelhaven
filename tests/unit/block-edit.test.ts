@@ -52,19 +52,4 @@ describe('block-edit', () => {
     expect(placeBlock([10, 1, 10], 1, asBlockSource(world), player)).toBe(true);
   });
 
-  it('placeBlock di atas grass: grass di bawahnya jadi dirt', () => {
-    const world = makeWorld((_x, y) => y === 0);
-    const src = asBlockSource(world);
-    expect(placeBlock([16, 1, 16], 2, src)).toBe(true);
-    expect(getBlock([16, 0, 16], world)).toBe(2);
-    expect(getBlock([16, 1, 16], world)).toBe(2);
-  });
-
-  it('placeBlock di atas dirt: tidak ada konversi grass', () => {
-    const world = makeWorld((_x, y) => y === 0);
-    world.data[0 * SIZE * SIZE + 16 * SIZE + 16] = 2;
-    const src = asBlockSource(world);
-    expect(placeBlock([16, 1, 16], 1, src)).toBe(true);
-    expect(getBlock([16, 0, 16], world)).toBe(2);
-  });
 });

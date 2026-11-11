@@ -10,6 +10,7 @@ Tanggal: 2026-11-11
 - `tests/unit/texture-atlas.test.ts` (4 test); total suite 47 test.
 
 ### Perbaikan pasca-M6
+- Grass tertutup dirender polos (tile dirt) oleh mesher — type blok tetap grass, jadi bongkar penutup = rumput tumbuh lagi. Band grass-side ditipiskan (2px + ragged). Ditambah `tests/unit/mesher-hidden-grass.test.ts`.
 - `16b0bf4`: placeBlock di atas grass mengonversi grass di bawahnya jadi dirt (khas Minecraft), jadi grass yang ditumpuk tidak menampilkan band rumput ganda. Band grass-side juga ditipiskan (2px + ragged). Ditambah 2 test di `tests/unit/block-edit.test.ts`.
 - `c65eea8`: UV face samping terbalik vertikal — band hijau grass-side muncul di sisi BAWAH blok, bukan atas. Akibat: grass yang ditumpuk di atas dirt terlihat tidak menyatu. Ditambah `tests/unit/mesher-uv.test.ts` (regression). Sisi bawah blok grass tetap tile dirt.
 

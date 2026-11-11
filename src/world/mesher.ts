@@ -55,6 +55,15 @@ function tileFor(type: Exclude<VoxelType, 0>, face: number): AtlasTile {
 }
 
 /**
+ * Grass tertutup blok solid di atasnya dirender polos (tile dirt),
+ * tapi type-nya tetap grass — kalau penutupnya dibongkar, rumput tumbuh lagi.
+ */
+function tileForHidden(type: Exclude<VoxelType, 0>, face: number, hidden: boolean): AtlasTile {
+  if (type !== 1 || !hidden) return tileFor(type, face);
+  return tileFor(2, face);
+}
+
+/**
  * Culling face di tepi chunk memakai terrain noise, bukan data chunk tetangga:
  * chunk tetangga yang belum dimuat akan membuat face tepi dianggap kosong
  * dan muncul "bolong" ke langit. Noise selalu tersedia dan deterministik.
@@ -95,6 +104,7 @@ export function buildChunkGeometry(chunk: Chunk, config?: TerrainConfig): Buffer
         const type = chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] as VoxelType;
         if (type === VOXEL_AIR) continue;
         const solid = type as Exclude<VoxelType, 0>;
+        const hidden = solid === 1 && solidForCulling(chunk, config, x, y + 1, z);
         const rgb = BLOCK_COLORS[solid];
         for (let f = 0; f < FACES.length; f++) {
           const face = FACES[f]!;
@@ -102,7 +112,7 @@ export function buildChunkGeometry(chunk: Chunk, config?: TerrainConfig): Buffer
           if (solidForCulling(chunk, config, x + nx, y + ny, z + nz)) continue;
           const base = positions.length / 3;
           const shade = AO_SHADE[f]!;
-          const { u0, v0, u1, v1 } = TILE_UVS.get(tileFor(solid, f))!;
+          const { u0, v0, u1, v1 } = TILE_UVS.get(tileForHidden(solid, f, hidden))!;
           const uvsFace = face.uvs;
           for (let i = 0; i < 4; i++) {
             const [cx, cy, cz] = face.corners[i]!;
