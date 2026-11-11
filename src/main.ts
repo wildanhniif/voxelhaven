@@ -285,7 +285,10 @@ const loop = startLoop(({ elapsed, delta }) => {
   // Loop memberi delta dalam ms; animasi pakai detik.
   const moving = fpsCamera.isLocked && (body.vx !== 0 || body.vz !== 0);
   playerModel.animate(delta / 1000, moving);
-  fppArms.update(delta / 1000, moving, fpsCamera.pitch);
+  // Slot aktif menentukan "pegangan": kosong -> tangan tersembunyi (kecuali saat mukul).
+  const activeSlot = inventory.slots[inventory.active];
+  const heldCount = activeSlot === undefined || activeSlot === null ? 0 : activeSlot.count;
+  fppArms.update(delta / 1000, moving, fpsCamera.pitch, heldCount);
   // Pickup item: inventory penuh → tryPickup false → item tetap di tanah.
   itemDrops.update(delta / 1000, body, chunkManager, (type) => {
     const next = addItem(inventory, type);

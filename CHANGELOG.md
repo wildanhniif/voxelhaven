@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [M6.5.2] — Aturan tampilnya tangan FPP (spec user)
+Tanggal: 2026-11-11
+
+### Selesai
+- Jarak lengan dilebar: BASE_POS_X 0.3 -> 0.55 (dekat tepi kiri/kanan layar).
+- Aturan visibilitas: slot aktif kosong (count 0) -> tangan tersembunyi; saat mukul (swing) tangan kanan muncul sejenak. Pegang item -> tangan kanan tampil; 2 jenis item dipegang -> kedua tangan.
+- fpp-arms.update kini menerima heldCount; main.ts menghitungnya dari slot aktif.
+
+### Cara Verifikasi Manual
+1. Slot aktif kosong (slot 4-9 atau count 0): tangan tidak terlihat; klik -> tangan kanan muncul sekejap mengayun.
+2. Slot aktif berisi blok: tangan kanan selalu terlihat.
+
 ## [M6.5.1] — Fix lengan FPP bergeser saat kamera diputar terus
 Tanggal: 2026-11-11
 

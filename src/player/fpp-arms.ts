@@ -8,7 +8,7 @@ import {
 
 const SWING_DURATION = 0.22; // detik
 /** Pose dasar lengan FPP (relatif kamera): kanan bawah, sedikit ke depan. */
-const BASE_POS_X = 0.3;
+const BASE_POS_X = 0.55;
 const BASE_POS_Y = -0.3;
 const BASE_POS_Z = -0.55;
 /** Geser seluruh pasangan lengan secara horizontal (negatif = ke kiri). */
@@ -18,8 +18,11 @@ export interface FirstPersonArmsHandle {
   /** Child dari camera. */
   readonly group: Group;
   swing(): void;
-  /** delta DETIK; pitch = rotasi kamera X (radian). */
-  update(delta: number, moving: boolean, pitch: number): void;
+  /**
+   * delta DETIK; pitch = rotasi kamera X (radian).
+   * heldCount = jumlah jenis item yang dipegang (0 = tangan kosong).
+   */
+  update(delta: number, moving: boolean, pitch: number, heldCount: number): void;
   setVisible(visible: boolean): void;
   dispose(): void;
 }
@@ -72,11 +75,11 @@ export function createFirstPersonArms(): FirstPersonArmsHandle {
     swing() {
       swingT = 0;
     },
-    update(delta, moving, pitch) {
+    update(delta, moving, pitch, heldCount) {
       elapsed += delta;
       const bob = moving ? Math.sin(elapsed * 8) : 0;
 
-      // Pitch kamera menggerakkan lengan naik/turun sepanjang layar.
+      // Pitch kamera menggerakkan lengan naik-turun sepanjang layar.
       const lift = pitch * 0.35;
       armR.position.y = BASE_POS_Y + bob * 0.02 + lift;
       armL.position.y = BASE_POS_Y + bob * 0.02 + lift;
@@ -91,6 +94,12 @@ export function createFirstPersonArms(): FirstPersonArmsHandle {
       const s = swingT < 0 ? 0 : Math.sin(swingT * Math.PI);
       armR.rotation.x = -s * 0.9;
       armR.position.z = BASE_POS_Z - s * 0.1;
+
+      // Tangan kosong: tangan tersembunyi, tapi muncul saat mukul.
+      // Pegang 1 item -> tangan kanan; 2 item -> dua-duanya.
+      const swinging = swingT >= 0;
+      armR.visible = heldCount >= 1 || swinging;
+      armL.visible = heldCount >= 2;
     },
     setVisible(visible) {
       group.visible = visible;
