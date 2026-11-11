@@ -258,13 +258,28 @@ function applyCameraMode(): void {
   fppArms.setVisible(!tpp);
   playerModel.update(body, fpsCamera.yaw, fpsCamera.pitch);
   if (tpp) {
-    const dir = lookDirection();
-    const dist = tppCameraDistance(eye, [-dir[0], -dir[1], -dir[2]], chunkManager);
-    camera.position.set(eye[0] - dir[0] * dist, eye[1] - dir[1] * dist, eye[2] - dir[2] * dist);
-    // TPP depan: kamera di depan player, menghadap balik ke arah player.
-    if (fpsCamera.mode === 'TPP_FRONT') {
-      camera.position.set(eye[0] + dir[0] * dist, eye[1] + dir[1] * dist, eye[2] + dir[2] * dist);
-    }
+    // Arah hadap player dihitung dari yaw/pitch, BUKAN camera.getWorldDirection():
+    // di mode TPP_FRONT rotasi kamera dibalik 180°, jadi arah kamera ≠ arah player.
+    const py = fpsCamera.yaw;
+    const pp = fpsCamera.pitch;
+    const dir: [number, number, number] = [
+      -Math.sin(py) * Math.cos(pp),
+      Math.sin(pp),
+      -Math.cos(py) * Math.cos(pp),
+    ];
+    // TPP: kamera mundur (belakang player). TPP_FRONT: maju (depan player).
+    const back = fpsCamera.mode === 'TPP' ? -1 : 1;
+    const offset: [number, number, number] = [
+      dir[0] * back,
+      dir[1] * back,
+      dir[2] * back,
+    ];
+    const dist = tppCameraDistance(eye, offset, chunkManager);
+    camera.position.set(
+      eye[0] + offset[0] * dist,
+      eye[1] + offset[1] * dist,
+      eye[2] + offset[2] * dist,
+    );
   }
 }
 

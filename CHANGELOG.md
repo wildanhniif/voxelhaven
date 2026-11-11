@@ -12,6 +12,17 @@ Tanggal: 2026-11-11
 2. Pilih slot grass → blok grass bertekstur di tangan kanan model.
 3. Ganti slot → blok berganti; slot tangan kosong → tangan kosong.
 
+## [M6.5.6] — Fix TPP depan: kamera kini benar-benar tampak muka
+Tanggal: 2026-11-11
+
+### Selesai
+- Fix bug TPP_FRONT: posisi kamera sebelumnya dihitung dari arah kamera (yang sudah dibalik 180°), sehingga kamera bermukim di belakang player dan membelakangi player. Sekarang posisi dihitung dari arah hadap player (yaw/pitch), kamera di depan player menghadap balik ke arah player.
+
+### Cara Verifikasi Manual
+1. Tekan F5 dua kali → badan player terlihat penuh dari depan (muka + mata).
+2. Gerakkan mouse → kamera tetap mengorbit menghadap player.
+3. Pilih slot blok → tangan kanan model tetap memegang blok bertekstur.
+
 ## [M6.5.4] — Slot tangan kosong, held block bertekstur, fix item ngambang
 Tanggal: 2026-11-11
 

@@ -57,13 +57,14 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     applyRotation();
   };
   const applyRotation = (): void => {
-    // TPP_FRONT: kamera menghadap kembali ke player (yaw dibalik 180°, pitch terbalik).
+    // TPP_FRONT: kamera di depan player dan harus melihat ke arah player,
+    // jadi arah pandang dibalik (yaw+180°, pitch terbalik).
     if (mode === 'TPP_FRONT') {
       camera.rotation.copy(new Euler(-pitch, yaw + Math.PI, 0, 'YXZ'));
     } else {
       camera.rotation.copy(new Euler(pitch, yaw, 0, 'YXZ'));
     }
-  };
+  }
 
   const onMouseMove = (event: MouseEvent): void => {
     if (document.pointerLockElement !== domElement) return;
