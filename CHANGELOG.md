@@ -9,6 +9,9 @@ Tanggal: 2026-11-11
 - `src/main.ts`: `MeshLambertMaterial({ vertexColors: true, map: atlas })`.
 - `tests/unit/texture-atlas.test.ts` (4 test); total suite 47 test.
 
+### Perbaikan pasca-M6
+- `c65eea8`: UV face samping terbalik vertikal — band hijau grass-side muncul di sisi BAWAH blok, bukan atas. Akibat: grass yang ditumpuk di atas dirt terlihat tidak menyatu. Ditambah `tests/unit/mesher-uv.test.ts` (regression). Sisi bawah blok grass tetap tile dirt.
+
 ### Belum dikerjakan (non-goals M6)
 - Mipmapping (bisa bikin bleeding), lighting/AO sungguhan, animasi tekstur.
 

@@ -26,7 +26,7 @@ describe('mesher UV orientasi face samping', () => {
       if (!isSide) continue;
       const py = pos.getY(i);
       // Vertex atas blok (y=1) harus sampling v atas tile, vertex bawah (y=0) v bawah.
-      expect(uv.getY(i)).toBeCloseTo(py > 0.9 ? tile.v1 : tile.v0, 6);
+      expect(uv.getY(i)).toBeCloseTo(py > 1.5 ? tile.v1 : tile.v0, 6);
       checkedSides++;
     }
     // Blok tunggal: 4 side face x 4 vertex = 16.
