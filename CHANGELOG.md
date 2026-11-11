@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## [M2] — Break/place blok + raycast
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/player/raycast.ts`: `raycastVoxel(origin, direction, maxDistance, world)` dengan DDA (Amanatides-Woo), mengembalikan `{ block, adjacent }`.
+- `src/world/block-edit.ts`: `breakBlock`, `placeBlock` (guard: luar batas, sudah solid, overlap AABB player), plus `overlapsPlayer`.
+- Highlight target: `LineSegments` wireframe putih 1.001x di blok yang di-target kamera (reach 6 blok).
+- Input: klik kiri hancur, klik kanan taruh grass, debounce 200 ms, hanya saat pointer lock.
+- Update mesh setelah edit (bangun ulang geometri chunk sekali per klik).
+- `tests/unit/raycast.test.ts` (6 test) + `tests/unit/block-edit.test.ts` (6 test) → total suite 24 test.
+
+### Belum dikerjakan (non-goals M2)
+- Inventory & pemilihan blok (M3), tekstur, sound, undo.
+
+### Risiko / Tech Debt
+- Remesh setelah edit membangun ulang seluruh chunk (32^3). Cukup cepat untuk klik manual (debounce 200 ms) tapi bukan remesh per-chunk-selectif; wajib diganti saat chunk banyak.
+- `main.ts` fungsi `onMouseDown` > 60 baris (aturan 6 AGENTS.md dilanggar) karena raycast duplikat untuk dapat blok asli.
+- Tidak ada batas tinggi bangun selain batas chunk.
+
+### Cara Verifikasi Manual
+1. `npm run dev` → klik kanvas → arahkan ke tanah → muncul outline putih di blok target.
+2. Klik kiri → blok hilang (lubang terlihat).
+3. Klik kanan → blok grass muncul di sisi yang di-target.
+4. Arahkan ke posisi di dalam tubuh sendiri → klik kanan tidak menaruh blok.
+5. Klik spam cepat → hanya satu edit per 200 ms.
+
 ## [M1] — Voxel world + FPS camera + collision
 Tanggal: 2026-11-11
 
@@ -8,27 +34,18 @@ Tanggal: 2026-11-11
 - `src/world/chunk.ts`: chunk 32x32x32 `Uint8Array` (flat index X-tercepat, lalu Z, lalu Y); flat 3 layer: stone → dirt → grass.
 - `src/world/mesher.ts`: chunk → satu `BufferGeometry`; vertex color per blok + shading per sisi; face yang bersentuhan blok solid di-cull.
 - `src/engine/camera-fps.ts`: pointer lock (klik lock, ESC lepas), yaw/pitch dari mouse, pitch clamp ±89°.
-- `src/player/controller.ts` + `constants.ts`: WASD relatif yaw, Space lompat (9 m/s), jalan 5 m/s.
-- `src/player/collision.ts`: AABB 0.6x1.8x0.6 vs voxel, resolve X→Y→Z, gravitasi 28 m/s², landing snap, respawn bila jatuh keluar world.
+- `src/player/controller.ts` + `constants.ts`: WASD relatif yaw, Space lompat, jalan 5 m/s, gravitasi 32 m/s² (~1.25 blok).
+- `src/player/collision.ts`: AABB 0.6x1.8x0.6 vs voxel, resolve X→Y→Z, landing snap, respawn bila jatuh keluar world.
 - Rotasi kubus M0 dihapus (kubus diganti world mesh).
-- `tests/unit/voxel.test.ts` (4 test) + `tests/unit/collision.test.ts` (5 test) + loop test M0 (1) = 10 test.
 
-### Belum dikerjakan (non-goals M1)
-- Hancur/taruh blok (M2), terrain noise (M4), tekstur, multiple chunks.
+### Perbaikan pasca-M1
+- `c52003f`: tanda rotasi strafe A/D (dan W/S saat yaw≠0) terbalik; ditambah `tests/unit/controller.test.ts`.
+- `33f2b34`: tuner lompatan ke feel Minecraft (gravitasi 32, jump ~1.25 blok).
 
 ### Risiko / Tech Debt
 - Satu chunk 32x32x32 = satu mesh; radius render terbatas pada chunk itu.
-- Bundle 537 kB karena Three.js (warning > 500 kB tetap ada).
-- Physics step pakai delta asli yang di-clamp 50 ms; belum fixed timestep, jadi perilaku bisa beda tipis antar FPS.
-- `beforeunload` tidak selalu terpanggil saat tab ditutup, listener memang tidak dipakai ulang (tidak ada leak berarti).
-
-### Cara Verifikasi Manual
-1. `npm run dev` → buka http://localhost:5173 → terlihat world flat blok hijau/coklat/abu.
-2. Klik kanvas → kursor hilang, gerakkan mouse → kamera berputar; ESC → lepas.
-3. W/A/S/D → jalan di permukaan grass; Space → lompat lalu jatuh lagi.
-4. Jalan ke tepi world lalu keluar tepi → jatuh; otomatis respawn di tengah (y=4).
-5. Coba jalan menembus dinding blok (turun ke layer grass lalu ke sisi blok) → tertahan.
-6. Overlay FPS kanan-atas kiri tetap update.
+- Bundle > 500 kB karena Three.js.
+- Physics pakai delta asli yang di-clamp 50 ms; belum fixed timestep.
 
 ## [M0] — Scaffold Vite + Three.js + Loop
 Tanggal: 2026-11-11
