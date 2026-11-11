@@ -11,7 +11,6 @@ import { buildChunkGeometry } from './world/mesher';
 import { createTextureAtlas } from './world/texture-atlas';
 import { CHUNK_SIZE, DEFAULT_TERRAIN, worldToChunk, type Chunk } from './world/terrain';
 import { createController, EYE_HEIGHT } from './player/controller';
-import { createViewModel } from './player/viewmodel';
 import { createPlayerModel } from './player/player-model';
 import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { raycastVoxel, type Vec3 } from './player/raycast';
@@ -123,10 +122,7 @@ scene.add(highlight);
 
 const fpsCamera = createFpsCamera(camera, renderer.domElement);
 
-// Tangan FPP = child kamera; kamera harus masuk scene graph.
-scene.add(camera);
-const viewmodel = createViewModel();
-camera.add(viewmodel.group);
+// Model player selalu dirender; FPP = kamera di dalam kepala (kepala disembunyikan).
 const playerModel = createPlayerModel();
 scene.add(playerModel.group);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
@@ -188,7 +184,6 @@ function placeAtCursor(): void {
 
 /** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
 function performAction(button: number): void {
-  viewmodel.swing();
   playerModel.swing();
   if (button === 0) breakAtCursor();
   else if (button === 2) placeAtCursor();
@@ -242,13 +237,12 @@ function applyCameraMode(): void {
   const eye = eyePosition();
   camera.position.set(eye[0], eye[1], eye[2]);
   const tpp = fpsCamera.mode === 'TPP';
-  viewmodel.group.visible = !tpp;
-  playerModel.group.visible = tpp;
+  playerModel.setHeadVisible(tpp);
+  playerModel.update(body, fpsCamera.yaw, fpsCamera.pitch);
   if (tpp) {
     const dir = lookDirection();
     const dist = tppCameraDistance(eye, [-dir[0], -dir[1], -dir[2]], chunkManager);
     camera.position.set(eye[0] - dir[0] * dist, eye[1] - dir[1] * dist, eye[2] - dir[2] * dist);
-    playerModel.update(body, fpsCamera.yaw, fpsCamera.pitch);
   }
 }
 
@@ -270,9 +264,8 @@ const loop = startLoop(({ elapsed, delta }) => {
     highlight.position.set(target[0] + 0.5, target[1] + 0.5, target[2] + 0.5);
   }
   updateHeldAction(performance.now());
-  // Loop memberi delta dalam ms; viewmodel & animasi pakai detik.
+  // Loop memberi delta dalam ms; animasi pakai detik.
   const moving = fpsCamera.isLocked && (body.vx !== 0 || body.vz !== 0);
-  viewmodel.update(delta / 1000, moving);
   playerModel.animate(delta / 1000, moving);
 
 
@@ -298,7 +291,6 @@ window.addEventListener('beforeunload', () => {
   loop();
   controller.dispose();
   fpsCamera.dispose();
-  viewmodel.dispose();
   playerModel.dispose();
   document.removeEventListener('mousedown', onMouseDown);
   document.removeEventListener('mouseup', onMouseUp);

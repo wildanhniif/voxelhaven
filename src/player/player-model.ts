@@ -6,7 +6,8 @@ export interface PlayerModelHandle {
   update(pos: { x: number; y: number; z: number }, yaw: number, pitch: number): void;
   /** Animasi: ayun kaki+tangan saat jalan; swing tangan kanan saat aksi blok. */
   animate(delta: number, walking: boolean): void;
-  /** Picu ayunan tangan kanan (aksi blok). */
+  /** Tampilkan/sembunyikan kepala (disembunyikan di FPP biar tidak nutup kamera). */
+  setHeadVisible(visible: boolean): void;
   swing(): void;
   dispose(): void;
 }
@@ -94,6 +95,9 @@ export function createPlayerModel(): PlayerModelHandle {
     },
     swing() {
       swingT = 0;
+    },
+    setHeadVisible(visible) {
+      head.visible = visible;
     },
     dispose() {
       group.traverse((obj) => {

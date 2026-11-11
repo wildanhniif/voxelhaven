@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [M6.3] — FPP pakai model player asli (kamera di kepala)
+Tanggal: 2026-11-11
+
+### Selesai
+- HAPUS src/player/viewmodel.ts: viewmodel tangan palsu dibuang total.
+- FPP kini memakai model player asli: kamera di posisi mata (1.62), kepala disembunyikan supaya tidak menutupi pandangan, badan/tangan/kaki terlihat seperti aslinya.
+- src/player/player-model.ts: tambah setHeadVisible(visible) untuk toggle kepala FPP/TPP.
+- src/main.ts: model player selalu dirender; applyCameraMode hanya mengatur posisi kamera dan visibilitas kepala.
+- Animasi jalan + swing tangan tetap jalan di kedua mode (tangan kanan mengayun saat break/place).
+
+### Risiko / Tech Debt
+- Tangan model bisa sedikit menutupi pandangan saat berayun; amplitudo animasi sudah moderat (0.5 rad).
+- Kamera di dalam kepala yang disembunyikan: aman, tapi kalau nanti ada headwear/helmet harus ikut disembunyikan.
+
+### Cara Verifikasi Manual
+1. FPP: lihat ke bawah → kaki terlihat; jalan → kaki & tangan berayun; klik → tangan kanan mengayun.
+2. F5: TPP dengan kepala terlihat; F5 lagi → balik FPP tanpa kepala.
+
 ## [M6.2d] — Pose tangan FPP dihitung terhadap frustum
 Tanggal: 2026-11-11
 
