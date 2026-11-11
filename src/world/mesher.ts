@@ -12,15 +12,6 @@ import { ATLAS_TILES, tileUv, type AtlasTile } from './texture-atlas';
 type Vec3 = readonly [number, number, number];
 type Uv = readonly [number, number];
 
-/** Warna RGB 0..1 per jenis blok (fallback/debug saat tanpa tekstur). */
-export const BLOCK_COLORS: Record<Exclude<VoxelType, 0>, Vec3> = {
-  1: [0.36, 0.65, 0.28], // grass
-  2: [0.55, 0.38, 0.22], // dirt
-  3: [0.5, 0.5, 0.52], // stone
-  4: [0.65, 0.53, 0.34], // wood
-  5: [0.23, 0.45, 0.19], // leaves
-};
-
 /**
  * Indeks face FACES: 0=+X, 1=-X, 2=+Y (top), 3=-Y (bottom), 4=+Z, 5=-Z.
  * corners: 4 posisi vertex; uvs: pasangan [u, v] per corner (0 = tepi tile, 1 = sisi lainnya).
@@ -124,7 +115,9 @@ export function buildChunkGeometry(
         if (type === VOXEL_AIR) continue;
         const solid = type as Exclude<VoxelType, 0>;
         const hidden = solid === 1 && solidForCulling(chunk, config, x, y + 1, z, getLoaded);
-        const rgb = BLOCK_COLORS[solid];
+        // Warna blok sudah ada di tekstur; vertex color hanya membawa shade
+        // wajah (pencahayaan). Memakai warna blok di sini membuat tekstur
+        // dikali dua (gelap/pekat) saat material pakai map + vertexColors.
         for (let f = 0; f < FACES.length; f++) {
           const face = FACES[f]!;
           const [nx, ny, nz] = face.normal;
@@ -137,7 +130,7 @@ export function buildChunkGeometry(
             const [cx, cy, cz] = face.corners[i]!;
             positions.push(x + cx, y + cy, z + cz);
             normals.push(nx, ny, nz);
-            colors.push(rgb[0] * shade, rgb[1] * shade, rgb[2] * shade);
+            colors.push(shade, shade, shade);
             const [fu, fv] = uvsFace[i]!;
             uvs.push(fu === 0 ? u0 : u1, fv === 0 ? v0 : v1);
           }
