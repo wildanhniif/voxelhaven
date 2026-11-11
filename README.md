@@ -3,7 +3,7 @@
 Clone Minecraft berbasis web. Voxel 3D, kamera FPS, hancur/taruh blok.
 
 ## Status
-M7 selesai: pohon prosedural (oak) dengan generasi lintas chunk, blok Wood & Leaves + tekstur atlas 3x3. Lihat `CHANGELOG.md`.
+M7.1 selesai: pohon prosedural lintas chunk + kontrol sentuh mobile (joystick, drag look, jump, break, place). Lihat `CHANGELOG.md`.
 
 ## Cara Menjalankan
 ```bash
