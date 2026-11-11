@@ -61,7 +61,10 @@ function buildMesh(chunk: Chunk): void {
     chunkGroup.remove(existing);
     chunkMeshes.delete(key);
   }
-  const mesh = new THREE.Mesh(buildChunkGeometry(chunk, DEFAULT_TERRAIN), material);
+  const mesh = new THREE.Mesh(
+    buildChunkGeometry(chunk, DEFAULT_TERRAIN, (x, y, z) => chunkManager.getBlockLoaded([x, y, z])),
+    material,
+  );
   mesh.position.set(chunk.cx * CHUNK_SIZE, 0, chunk.cz * CHUNK_SIZE);
   chunkMeshes.set(key, mesh);
   chunkGroup.add(mesh);
@@ -119,11 +122,7 @@ highlight.visible = false;
 scene.add(highlight);
 
 const fpsCamera = createFpsCamera(camera, renderer.domElement);
-
-// Viewmodel menempel di kamera; kamera harus masuk scene graph.
-scene.add(camera);
 const viewmodel = createViewModel();
-camera.add(viewmodel.group);
 const playerModel = createPlayerModel();
 scene.add(playerModel.group);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
@@ -239,7 +238,6 @@ function applyCameraMode(): void {
   const eye = eyePosition();
   camera.position.set(eye[0], eye[1], eye[2]);
   const tpp = fpsCamera.mode === 'TPP';
-  viewmodel.group.visible = !tpp;
   playerModel.group.visible = tpp;
   if (tpp) {
     const dir = lookDirection();
@@ -274,7 +272,15 @@ const loop = startLoop(({ elapsed, delta }) => {
 
 
   hotbar.update(inventory);
+  renderer.autoClear = true;
   renderer.render(scene, camera);
+  // Viewmodel di pass terpisah: selalu di depan, tidak tembus blok.
+  if (fpsCamera.mode === 'FPP') {
+    renderer.autoClear = false;
+    renderer.clearDepth();
+    viewmodel.camera.aspect = camera.aspect;
+    renderer.render(viewmodel.scene, viewmodel.camera);
+  }
   onFps(elapsed);
 });
 

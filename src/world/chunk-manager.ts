@@ -51,6 +51,17 @@ export class ChunkManager implements BlockSource {
     return chunk.data[flatIndex(lx, y, lz, CHUNK_SIZE)] as VoxelType;
   }
 
+  /** Sama dengan getBlock, tapi null kalau chunk belum dimuat (bukan udara). */
+  getBlockLoaded(pos: BlockPos): VoxelType | null {
+    const [x, y, z] = pos;
+    if (y < 0 || y >= CHUNK_SIZE) return VOXEL_AIR;
+    const chunk = this.chunkAt(x, z);
+    if (chunk === null) return null;
+    const lx = x - chunk.cx * CHUNK_SIZE;
+    const lz = z - chunk.cz * CHUNK_SIZE;
+    return chunk.data[flatIndex(lx, y, lz, CHUNK_SIZE)] as VoxelType;
+  }
+
   setBlock(pos: BlockPos, type: VoxelType): boolean {
     const [x, y, z] = pos;
     if (y < 0 || y >= CHUNK_SIZE) return false;

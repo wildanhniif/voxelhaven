@@ -74,24 +74,37 @@ function solidForCulling(
   x: number,
   y: number,
   z: number,
+  getLoaded?: (x: number, y: number, z: number) => VoxelType | null,
 ): boolean {
   if (y < 0) return true; // dasar world solid supaya face bawah tidak digambar
   if (y >= CHUNK_HEIGHT) return false;
   const inside = x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE;
   if (inside) return chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] !== VOXEL_AIR;
 
-  // Edit player di dalam chunk selalu menang atas terrain:
+  // Edit player di chunk tetangga yang SUDAH dimuat menang atas noise,
+  // supaya galian di perbatasan tidak membuat "bolong ke langit".
+  if (getLoaded !== undefined) {
+    const wx = chunk.cx * CHUNK_SIZE + x;
+    const wz = chunk.cz * CHUNK_SIZE + z;
+    const loaded = getLoaded(wx, y, wz);
+    if (loaded !== null) return loaded !== VOXEL_AIR;
+  }
+  // Chunk tetangga belum dimuat: fallback ke terrain noise (deterministik).
   if (config === undefined) return false;
-  const wx = chunk.cx * CHUNK_SIZE + x;
-  const wz = chunk.cz * CHUNK_SIZE + z;
-  return y <= heightAt(wx, wz, config);
+  const wx2 = chunk.cx * CHUNK_SIZE + x;
+  const wz2 = chunk.cz * CHUNK_SIZE + z;
+  return y <= heightAt(wx2, wz2, config);
 }
 
 /**
  * Ubah satu chunk jadi BufferGeometry lokal (origin chunk).
  * Face yang nempel blok solid (termasuk chunk tetangga via noise) tidak digenerate.
  */
-export function buildChunkGeometry(chunk: Chunk, config?: TerrainConfig): BufferGeometry {
+export function buildChunkGeometry(
+  chunk: Chunk,
+  config?: TerrainConfig,
+  getLoaded?: (x: number, y: number, z: number) => VoxelType | null,
+): BufferGeometry {
   const positions: number[] = [];
   const normals: number[] = [];
   const colors: number[] = [];
@@ -104,12 +117,12 @@ export function buildChunkGeometry(chunk: Chunk, config?: TerrainConfig): Buffer
         const type = chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] as VoxelType;
         if (type === VOXEL_AIR) continue;
         const solid = type as Exclude<VoxelType, 0>;
-        const hidden = solid === 1 && solidForCulling(chunk, config, x, y + 1, z);
+        const hidden = solid === 1 && solidForCulling(chunk, config, x, y + 1, z, getLoaded);
         const rgb = BLOCK_COLORS[solid];
         for (let f = 0; f < FACES.length; f++) {
           const face = FACES[f]!;
           const [nx, ny, nz] = face.normal;
-          if (solidForCulling(chunk, config, x + nx, y + ny, z + nz)) continue;
+          if (solidForCulling(chunk, config, x + nx, y + ny, z + nz, getLoaded)) continue;
           const base = positions.length / 3;
           const shade = AO_SHADE[f]!;
           const { u0, v0, u1, v1 } = TILE_UVS.get(tileForHidden(solid, f, hidden))!;

@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [M6.2b] — Polish viewmodel + fix bolong perbatasan chunk
+Tanggal: 2026-11-11
+
+### Selesai
+- src/player/viewmodel.ts: lengan kecil proporsional (0.24x0.24x0.55) + blok kecil 0.15 yang dipegang, posisi kanan-bawah (0.42, -0.38, -0.75), rotasi miring X-15/Y15/Z-15.
+- Depth fix: viewmodel dirender di scene terpisah setelah world (renderer.autoClear=false + clearDepth), jadi tidak pernah tembus ke dalam blok saat nempel dinding.
+- Animasi: swing sinus halus 200ms (chop turun + maju), bobbing pelan saat jalan. Semua pakai delta time detik.
+- FIX BUG BOLONG: mesher kini membaca data chunk tetangga yang SUDAH dimuat (ChunkManager.getBlockLoaded) untuk culling tepi; fallback ke noise hanya jika chunk belum dimuat. Sebelumnya galian di perbatasan chunk membuat face chunk sebelah ter-cull = bolong ke langit tapi tidak tembus.
+- src/world/chunk-manager.ts: tambah getBlockLoaded(pos) -> VoxelType | null.
+- tests/unit/mesher-neighbor-culling.test.ts (2 test); total suite 62 test.
+
+### Risiko / Tech Debt
+- getLoaded dipanggil per face tepi; jika kelak jadi bottleneck, cache hasil per kolom.
+
+### Cara Verifikasi Manual
+1. FPP: tangan terlihat proporsional di kanan bawah, memegang blok kecil; nempel dinding: tangan tetap di depan (tidak tembus).
+2. Klik kiri/kanan: ayunan mulus ~200ms; jalan: bobbing pelan.
+3. Gali blok di perbatasan chunk (dekat tepi 16x16): tidak ada bolong ke langit.
+4. F5 TPP lalu balik FPP: tangan muncul/hilang dengan benar.
+
 ## [M6.2.2] — Fix pivot tangan FPP (kayak patah)
 Tanggal: 2026-11-11
 
