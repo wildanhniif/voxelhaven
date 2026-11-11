@@ -3,6 +3,7 @@ import { createFpsCamera } from './engine/camera-fps';
 import { startLoop } from './engine/loop';
 import { createDebugOverlay } from './ui/debug-overlay';
 import { createHotbar } from './ui/hotbar';
+import { createBlockStore } from './state/block-store';
 import { createInventory, getActiveBlock, selectSlot, type Inventory } from './state/inventory';
 import { breakBlock, placeBlock, type PlayerBounds } from './world/block-edit';
 import { ChunkManager } from './world/chunk-manager';
@@ -37,10 +38,12 @@ const sun = new THREE.DirectionalLight(0xffffff, 0.8);
 sun.position.set(1, 2, 0.5);
 scene.add(sun);
 
+const blockStore = createBlockStore();
 const chunkManager = new ChunkManager(
   DEFAULT_TERRAIN,
   (chunk) => buildMesh(chunk),
   (chunk) => removeMesh(chunk),
+  blockStore,
 );
 
 function chunkKey(chunk: Chunk): string {
@@ -185,8 +188,13 @@ function onBlur(): void {
   heldButton = -1;
 }
 
-/** Pilih slot via tombol 1..9. */
+/** Pilih slot via tombol 1..9; Backspace = reset world (hapus semua edit). */
 function onKeyDown(event: KeyboardEvent): void {
+  if (event.code === 'Backspace') {
+    blockStore.clearEdits();
+    location.reload();
+    return;
+  }
   const index = Number(event.key) - 1;
   if (Number.isInteger(index) && index >= 0 && index < 9) {
     inventory = selectSlot(inventory, index);
@@ -240,6 +248,7 @@ window.addEventListener('resize', () => {
 });
 
 window.addEventListener('beforeunload', () => {
+  blockStore.flush();
   loop();
   controller.dispose();
   fpsCamera.dispose();

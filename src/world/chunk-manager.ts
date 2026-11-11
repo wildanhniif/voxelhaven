@@ -1,10 +1,18 @@
-import { CHUNK_SIZE, generateChunk, worldToChunk, type Chunk, type TerrainConfig } from './terrain';
-import { flatIndex, VOXEL_AIR, type BlockPos, type BlockSource, type VoxelType } from './voxel';
+import type { BlockSource, BlockPos, VoxelType } from '../world/voxel';
+import { flatIndex, VOXEL_AIR } from '../world/voxel';
+import { CHUNK_SIZE, generateChunk, type Chunk, type TerrainConfig } from './terrain';
 
 export const LOAD_RADIUS = 4;
 export const UNLOAD_RADIUS = 6;
 /** Max chunk yang di-generate per frame agar tidak freeze. */
 const MAX_CHUNKS_PER_FRAME = 1;
+
+/** Persistence minimal yang dibutuhkan chunk manager (implementasi: BlockStore). */
+export interface EditLog {
+  recordEdit(pos: BlockPos, type: VoxelType): void;
+  /** Edit per chunk (posisi absolut, tipe). */
+  editsInChunk(cx: number, cz: number, size: number): Iterable<[BlockPos, VoxelType]>;
+}
 
 /** Cache chunk yang sudah dimuat, plus streaming radius. */
 export class ChunkManager implements BlockSource {
@@ -15,6 +23,7 @@ export class ChunkManager implements BlockSource {
     private readonly config: TerrainConfig,
     private readonly onChunkLoaded: (chunk: Chunk) => void,
     private readonly onChunkUnloaded: (chunk: Chunk) => void,
+    private readonly edits: EditLog | null = null,
   ) {}
 
   /** Config terrain dipakai mesher untuk culling di tepi chunk. */
@@ -50,6 +59,7 @@ export class ChunkManager implements BlockSource {
     const lx = x - chunk.cx * CHUNK_SIZE;
     const lz = z - chunk.cz * CHUNK_SIZE;
     chunk.data[flatIndex(lx, y, lz, CHUNK_SIZE)] = type;
+    this.edits?.recordEdit(pos, type);
     this.onChunkLoaded(chunk);
     return true;
   }
@@ -76,6 +86,7 @@ export class ChunkManager implements BlockSource {
     for (let i = 0; i < MAX_CHUNKS_PER_FRAME && this.queue.length > 0; i++) {
       const { cx, cz } = this.queue.shift()!;
       const chunk = generateChunk(cx, cz, this.config);
+      this.applyEdits(chunk);
       this.chunks.set(key(cx, cz), chunk);
       this.onChunkLoaded(chunk);
       loadedChunk = chunk;
@@ -91,6 +102,22 @@ export class ChunkManager implements BlockSource {
 
     return loadedChunk;
   }
+
+  /** Timpa hasil generate dengan edit player untuk chunk ini. */
+  private applyEdits(chunk: Chunk): void {
+    if (this.edits === null) return;
+    for (const [pos, type] of this.edits.editsInChunk(chunk.cx, chunk.cz, CHUNK_SIZE)) {
+      const [x, y, z] = pos;
+      if (y < 0 || y >= CHUNK_SIZE) continue;
+      const lx = x - chunk.cx * CHUNK_SIZE;
+      const lz = z - chunk.cz * CHUNK_SIZE;
+      chunk.data[flatIndex(lx, y, lz, CHUNK_SIZE)] = type;
+    }
+  }
+}
+
+function worldToChunk(x: number, z: number): { cx: number; cz: number } {
+  return { cx: Math.floor(x / CHUNK_SIZE), cz: Math.floor(z / CHUNK_SIZE) };
 }
 
 function key(cx: number, cz: number): string {

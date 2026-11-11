@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [M5] — Persistence untuk edit blok
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/state/block-store.ts` (baru): log edit delta (`Map<"x,y,z", VoxelType>`), persistence ke localStorage key `voxel-sandbox:edits:v1`, flush batched (tiap 20 edit) + flush di `beforeunload`.
+- `src/world/chunk-manager.ts`: setiap chunk yang dimuat di-timpa dengan edit dari `EditLog` (interface `editsInChunk`); `setBlock` otomatis `recordEdit`.
+- Reset world: tombol **Backspace** → hapus localStorage + reload.
+- `tests/unit/block-store.test.ts` (7 test); total suite 43 test.
+
+### Belum dikerjakan (non-goals M5)
+- Save inventory player, posisi player, IndexedDB.
+
+### Risiko / Tech Debt
+- `editsInChunk` scan linear semua edit (O(n)); jadi lambat kalau edit > ribuan. Perlu index per-chunk kalau world edit-nya masif.
+- Quota localStorage (~5 MB) belum di-handle; `flush` bisa lempar `QuotaExceededError` pada world yang sangat banyak diedit. Edit 1 blok ≈ 15 byte JSON, jalu ~300 ribu edit sebelum bahaya; risiko rendah untuk sekarang.
+- Reset world tidak meminta konfirmasi (Backspace langsung reload).
+
+### Cara Verifikasi Manual
+1. `npm run dev` → taruh blok → jalan jauh sampai chunk ter-unload → kembali: blok masih ada.
+2. Refresh (F5): blok masih ada.
+3. Tekan Backspace: world reset ke terrain polos.
+
 ## [M4] — Terrain noise + chunk streaming
 Tanggal: 2026-11-11
 
@@ -7,25 +29,22 @@ Tanggal: 2026-11-11
 - `src/world/terrain.ts` (baru): `heightAt(x, z, config)` (simplex-noise seeded mulberry32), `generateChunk(cx, cz, config)` murni & deterministik, `topSolidY`, `worldToChunk`; layer stone → dirt (3 blok) → grass.
 - `src/world/chunk-manager.ts` (baru): streaming chunk, load radius 4, unload radius 6, antrian terurut jarak, max 1 chunk di-generate per frame; implements `BlockSource` koordinat dunia.
 - `src/world/voxel.ts`: interface `BlockSource { getBlock, setBlock }` + adapter `asBlockSource`; physics/raycast/edit sekarang koordinat dunia.
-- `src/world/mesher.ts`: per-chunk mesh, culling face lintas chunk via callback `neighbor`.
+- `src/world/mesher.ts`: per-chunk mesh, culling face tepi chunk via terrain noise (`66dc422`).
 - `src/world/chunk.ts` (hapus): diganti terrain.ts.
 - `src/main.ts`: mesh per chunk diposisikan di grid, spawn player di atas permukaan terrain, fog, remesh chunk + tetangga saat edit.
 - Dependency baru: `simplex-noise` (diizinkan untuk milestone ini).
-- `tests/unit/terrain.test.ts` (4 test); total suite 34 test.
+- `tests/unit/terrain.test.ts` (4 test) + `tests/unit/mesher-culling.test.ts` (2 test).
 
 ### Belum dikerjakan (non-goals M4)
-- Bioma, gua/ore, greedy meshing (perf), save/load chunk yang diedit saat unload.
+- Bioma, gua/ore, greedy meshing (perf).
 
 ### Risiko / Tech Debt
-- Unload membuang chunk termasuk edit player (belum ada persistence); terrain regenerasi polos.
-- Ekspose `flatIndex` dari terrain.ts hanya untuk test; bisa dipindah ke helper terpisah.
 - `sim.experimental.frameTimeMetrics` rata-rata ~16.6 ms di Chromium headless (≈60 FPS); max frame 17.7 ms → tidak ada spike > 50 ms saat streaming. Perf nyata perlu cek di mesin user.
 
 ### Cara Verifikasi Manual
 1. `npm run dev` → spawn di atas terrain bergelombang (bukan datar).
 2. Jalan ke arah mana pun → chunk baru muncul bertahap di depan (1 chunk/frame, terdekat dulu).
-3. FPS counter stabil di 60 (headless); tidak ada freeze saat chunk masuk.
-4. Edit blok tetap bekerja di koordinat dunia lintas chunk.
+3. Edit blok tetap bekerja di koordinat dunia lintas chunk.
 
 ## [M3] — Hotbar + inventory
 Tanggal: 2026-11-11
