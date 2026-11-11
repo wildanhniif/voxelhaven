@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [M6.5.5] — Kamera TPP depan (lihat muka) + TPP pegang blok
+Tanggal: 2026-11-11
+
+### Selesai
+- F5 kini 3 mode: FPP → TPP belakang → TPP depan (kamera di depan player, menghadap balik; yaw dibalik 180°, pitch terbalik).
+- Model player (TPP) kini memegang blok bertekstur di tangan kanan, sinkron dengan slot hotbar aktif (sama seperti FPP).
+
+### Cara Verifikasi Manual
+1. Tekan F5 dua kali → kamera di depan, muka + mata player terlihat.
+2. Pilih slot grass → blok grass bertekstur di tangan kanan model.
+3. Ganti slot → blok berganti; slot tangan kosong → tangan kosong.
+
 ## [M6.5.4] — Slot tangan kosong, held block bertekstur, fix item ngambang
 Tanggal: 2026-11-11
 

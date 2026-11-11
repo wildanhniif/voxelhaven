@@ -1,3 +1,6 @@
+import { blockBoxGeometry } from '../world/mesher';
+import { atlasTexture } from '../world/texture-atlas';
+import type { VoxelType } from '../world/voxel';
 import { BoxGeometry, Group, Mesh, MeshLambertMaterial, type Material } from 'three';
 
 /** Pose dasar tangan: sedikit diangkat ke depan (radian), biar gak menggantung kaku. */
@@ -11,6 +14,8 @@ export interface PlayerModelHandle {
   animate(delta: number, walking: boolean): void;
   /** Tampilkan/sembunyikan kepala (disembunyikan di FPP biar tidak nutup kamera). */
   setHeadVisible(visible: boolean): void;
+  /** Set blok yang dipegang di tangan kanan (null = tangan kosong). */
+  setHeldType(type: VoxelType | null): void;
   swing(): void;
   dispose(): void;
 }
@@ -75,6 +80,8 @@ export function createPlayerModel(): PlayerModelHandle {
   let elapsed = 0;
   let swingT = -1; // -1 = idle, 0..1 = sedang mengayun tangan kanan
   const SWING_DURATION = 0.25;
+  // Blok dipegang di tangan kanan (untuk TPP).
+  let heldBlock: Mesh | null = null;
 
   return {
     group,
@@ -83,6 +90,21 @@ export function createPlayerModel(): PlayerModelHandle {
       group.rotation.y = yaw;
       head.rotation.x = camPitch; // kepala ikut lihat atas/bawah
       pitch = camPitch;
+    },
+    setHeldType(type) {
+      if (heldBlock !== null) {
+        armR.remove(heldBlock);
+        heldBlock.geometry.dispose();
+        (heldBlock.material as MeshLambertMaterial).dispose();
+        heldBlock = null;
+      }
+      if (type === null) return;
+      heldBlock = new Mesh(
+        blockBoxGeometry(type, 0.2),
+        new MeshLambertMaterial({ map: atlasTexture() }),
+      );
+      heldBlock.position.set(0, -0.55, -0.1);
+      armR.add(heldBlock);
     },
     animate(delta, walking) {
       elapsed += delta;

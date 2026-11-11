@@ -9,7 +9,7 @@ export const TPP_DISTANCE = 4;
 const TPP_STEP = 0.1;
 const TPP_MARGIN = 0.2;
 
-export type CameraMode = 'FPP' | 'TPP';
+export type CameraMode = 'FPP' | 'TPP' | 'TPP_FRONT';
 
 /**
  * Jarak aman kamera TPP: jarak bebas-tabrak dari mata player ke arah
@@ -52,12 +52,17 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     if (event.code !== 'F5') return;
     // F5 default = refresh; kita pakai untuk ganti kamera.
     event.preventDefault();
-    mode = mode === 'FPP' ? 'TPP' : 'FPP';
+    // FPP -> TPP belakang -> TPP depan (lihat muka) -> FPP.
+    mode = mode === 'FPP' ? 'TPP' : mode === 'TPP' ? 'TPP_FRONT' : 'FPP';
+    applyRotation();
   };
-
-
   const applyRotation = (): void => {
-    camera.rotation.copy(new Euler(pitch, yaw, 0, 'YXZ'));
+    // TPP_FRONT: kamera menghadap kembali ke player (yaw dibalik 180°, pitch terbalik).
+    if (mode === 'TPP_FRONT') {
+      camera.rotation.copy(new Euler(-pitch, yaw + Math.PI, 0, 'YXZ'));
+    } else {
+      camera.rotation.copy(new Euler(pitch, yaw, 0, 'YXZ'));
+    }
   };
 
   const onMouseMove = (event: MouseEvent): void => {

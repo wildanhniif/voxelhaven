@@ -252,7 +252,7 @@ const onContextMenu = (event: MouseEvent): void => event.preventDefault();
 function applyCameraMode(): void {
   const eye = eyePosition();
   camera.position.set(eye[0], eye[1], eye[2]);
-  const tpp = fpsCamera.mode === 'TPP';
+  const tpp = fpsCamera.mode === 'TPP' || fpsCamera.mode === 'TPP_FRONT';
   // FPP: seluruh badan disembunyikan (kamera di dalam kepala), ganti lengan FPP.
   playerModel.group.visible = tpp;
   fppArms.setVisible(!tpp);
@@ -261,6 +261,10 @@ function applyCameraMode(): void {
     const dir = lookDirection();
     const dist = tppCameraDistance(eye, [-dir[0], -dir[1], -dir[2]], chunkManager);
     camera.position.set(eye[0] - dir[0] * dist, eye[1] - dir[1] * dist, eye[2] - dir[2] * dist);
+    // TPP depan: kamera di depan player, menghadap balik ke arah player.
+    if (fpsCamera.mode === 'TPP_FRONT') {
+      camera.position.set(eye[0] + dir[0] * dist, eye[1] + dir[1] * dist, eye[2] + dir[2] * dist);
+    }
   }
 }
 
@@ -288,8 +292,11 @@ const loop = startLoop(({ elapsed, delta }) => {
   // Slot aktif menentukan "pegangan": kosong -> tangan tersembunyi (kecuali saat mukul).
   const activeSlot = inventory.slots[inventory.active];
   const held = activeSlot !== undefined && activeSlot !== null && activeSlot.count > 0;
-  fppArms.setHeldType(held ? (activeSlot?.type ?? null) : null);
+  const heldType = held ? (activeSlot?.type ?? null) : null;
+  fppArms.setHeldType(heldType);
   fppArms.update(delta / 1000, moving, fpsCamera.pitch, held ? 1 : 0);
+  // TPP: tangan model juga memegang blok yang sama.
+  playerModel.setHeldType(heldType);
   // Pickup item: inventory penuh → tryPickup false → item tetap di tanah.
   itemDrops.update(delta / 1000, body, chunkManager, (type) => {
     const next = addItem(inventory, type);
