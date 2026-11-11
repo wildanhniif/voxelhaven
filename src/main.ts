@@ -11,6 +11,7 @@ import { buildChunkGeometry } from './world/mesher';
 import { createTextureAtlas } from './world/texture-atlas';
 import { CHUNK_SIZE, DEFAULT_TERRAIN, worldToChunk, type Chunk } from './world/terrain';
 import { createController, EYE_HEIGHT } from './player/controller';
+import { createFirstPersonArms } from './player/fpp-arms';
 import { createPlayerModel } from './player/player-model';
 import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { raycastVoxel, type Vec3 } from './player/raycast';
@@ -122,9 +123,13 @@ scene.add(highlight);
 
 const fpsCamera = createFpsCamera(camera, renderer.domElement);
 
-// Model player selalu dirender; FPP = kamera di dalam kepala (kepala disembunyikan).
+// Model player: hanya untuk TPP. Di FPP, badan atas disembunyikan total
+// (kamera ada di dalam kepala) dan diganti lengan FPP sederhana.
 const playerModel = createPlayerModel();
 scene.add(playerModel.group);
+const fppArms = createFirstPersonArms();
+camera.add(fppArms.group);
+scene.add(camera);
 const controller = createController(camera, body, () => fpsCamera.isLocked);
 
 let inventory: Inventory = createInventory();
@@ -185,6 +190,7 @@ function placeAtCursor(): void {
 /** Jalankan aksi tombol; dipakai saat mousedown dan saat repeat. */
 function performAction(button: number): void {
   playerModel.swing();
+  fppArms.swing();
   if (button === 0) breakAtCursor();
   else if (button === 2) placeAtCursor();
 }
@@ -237,7 +243,9 @@ function applyCameraMode(): void {
   const eye = eyePosition();
   camera.position.set(eye[0], eye[1], eye[2]);
   const tpp = fpsCamera.mode === 'TPP';
-  playerModel.setHeadVisible(tpp);
+  // FPP: seluruh badan disembunyikan (kamera di dalam kepala), ganti lengan FPP.
+  playerModel.group.visible = tpp;
+  fppArms.setVisible(!tpp);
   playerModel.update(body, fpsCamera.yaw, fpsCamera.pitch);
   if (tpp) {
     const dir = lookDirection();
@@ -267,6 +275,7 @@ const loop = startLoop(({ elapsed, delta }) => {
   // Loop memberi delta dalam ms; animasi pakai detik.
   const moving = fpsCamera.isLocked && (body.vx !== 0 || body.vz !== 0);
   playerModel.animate(delta / 1000, moving);
+  fppArms.update(delta / 1000, moving, fpsCamera.pitch, fpsCamera.yaw);
 
 
   hotbar.update(inventory);

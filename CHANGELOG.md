@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [M6.4] — Lengan FPP terpisah, badan disembunyikan
+Tanggal: 2026-11-11
+
+### Selesai
+- Root cause badan aneh: kamera FPP ada DI DALAM kepala model; saat pitch ekstrem, bahu/kerah torso terlihat dari dalam dan tampak seperti tembok.
+- Solusi: di FPP seluruh model player disembunyikan; diganti src/player/fpp-arms.ts — dua lengan kecil (sleeve biru + tangan kulit) child kamera, depthTest:false + renderOrder 999.
+- Lengan FPP mengikuti pitch kamera (lift = pitch*0.35): lihat atas → lengan naik ke tengah layar, lihat bawah → lengan turun. Tidak ada badan/kerah yang aneh lagi.
+- Klik break/place: swing sinus 220ms di lengan kanan. Jalan: bobbing.
+- TPP tidak berubah: model player penuh (kepala terlihat).
+
+### Cara Verifikasi Manual
+1. FPP: lihat ke atas (awan) → dua lengan naik terlihat; lihat ke bawah → lengan turun, TIDAK ada badan/kerah aneh.
+2. Klik → lengan kanan mengayun; jalan → bobbing.
+3. F5 TPP → model penuh normal; F5 balik → hanya lengan FPP.
+
 ## [M6.3.2] — Fix lengan saat lihat ke bawah
 Tanggal: 2026-11-11
 
