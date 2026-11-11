@@ -8,7 +8,7 @@ export const CHUNK_HEIGHT = 32;
 export const DIRT_DEPTH = 3;
 
 /** Peluang satu sel grid punya pohon (lihat getTreeHeight). */
-export const TREE_PROBABILITY = 0.2;
+export const TREE_PROBABILITY = 0.04;
 /** Ukuran sel grid spacing; satu sel maksimal satu pohon. */
 export const TREE_CELL = 10;
 /** Jarak minimum jitter dari tepi sel (menjaga jarak antar pohon). */
