@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [M6.5.3] — Fix: stack 22 blok dianggap pegang 2 tangan
+Tanggal: 2026-11-11
+
+### Selesai
+- Bug: main.ts mengirim COUNT stack (mis. 22 grass) ke heldCount, padahal fpp-arms mengharapkan jumlah JENIS item yang dipegang -> memegang grass 22 muncul 2 tangan.
+- Fix: kirim 1 (ada item di slot aktif) atau 0 (kosong), bukan count stack.
+
 ## [M6.5.2] — Aturan tampilnya tangan FPP (spec user)
 Tanggal: 2026-11-11
 
