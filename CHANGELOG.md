@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [M7.2] — Fix blok hitam + save state player
+Tanggal: 2026-11-11
+
+### Selesai
+- `src/world/mesher.ts` (fix bug): vertex color sebelumnya memakai `BLOCK_COLORS` per jenis blok padahal material chunk memakai `map` + `vertexColors: true` → warna blok dan tekstur **dikalikan dua** (leaves jadi hitam pekat, terlihat saat break dan di sekitar tajuk pohon). Vertex color sekarang hanya membawa shade wajah (AO). `BLOCK_COLORS` dihapus karena tidak terpakai lagi.
+- `src/world/terrain.ts`: `TREE_PROBABILITY` 0.2 → 0.04 (pohon jauh lebih jarang, ~0.4 pohon/chunk).
+- `src/state/player-save.ts` (baru): persist posisi player + inventory ke localStorage (`voxel-sandbox:player:v1`), dengan validasi parse. Autosave tiap 10 detik di loop render + flush di `beforeunload` (beforeunload tidak handal di mobile, OS bisa bunuh tab tanpa event).
+- Edit blok sudah terpersist via `block-store` (localStorage), seed world fixed 1337 → world konsisten antar reload.
+
+### Catatan desain
+- **"Database"**: untuk game browser single-player, localStorage + serialisasi delta (edit blok) + state player adalah pilihan yang benar — tanpa dependency baru, sinkron, cukup untuk ratusan ribu edit. SQLite/Postgres hanya relevan kalau nanti ada multiplayer.
+- Kendala verifikasi: blok hitam dianalisis lewat data geometri headless (vertex color terbukti sumber masalah) tapi render visual mobile belum dicek ulang di device.
+
 ## [M7.1] — Kontrol sentuh mobile (gerak dasar)
 Tanggal: 2026-11-11
 

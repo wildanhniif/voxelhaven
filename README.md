@@ -3,7 +3,7 @@
 Clone Minecraft berbasis web. Voxel 3D, kamera FPS, hancur/taruh blok.
 
 ## Status
-M7.1 selesai: pohon prosedural lintas chunk + kontrol sentuh mobile (joystick, drag look, jump, break, place). Lihat `CHANGELOG.md`.
+M7.2 selesai: fix blok hitam (vertex color terkalikan dua), pohon lebih jarang, save state player (posisi + inventory, autosave 10s). Lihat `CHANGELOG.md`.
 
 ## Cara Menjalankan
 ```bash
@@ -57,6 +57,7 @@ deterministik dari noise, lalu edit diterapkan di atasnya. Akibatnya:
 - `src/entity/item-drop.ts` → entity item drop: fisika jatuh, putar/bobbing, pickup radius
 - `src/ui/hotbar.ts` → render hotbar DOM + badge count + nama blok
 - `src/ui/touch-controls.ts` → joystick virtual + drag look + tombol aksi (mobile)
+- `src/state/player-save.ts` → persist posisi + inventory ke localStorage (autosave 10s)
 
 ## Roadmap
 Lihat AGENTS.md dan CHANGELOG.md.

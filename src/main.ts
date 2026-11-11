@@ -12,8 +12,10 @@ import { buildChunkGeometry } from './world/mesher';
 import { createTextureAtlas } from './world/texture-atlas';
 import { CHUNK_SIZE, DEFAULT_TERRAIN, worldToChunk, type Chunk } from './world/terrain';
 import { createTouchControls } from './ui/touch-controls';
-import { createController, EYE_HEIGHT } from './player/controller';
+import { loadPlayer, savePlayer } from './state/player-save';
+import type { VoxelType } from './world/voxel';
 import { createFirstPersonArms } from './player/fpp-arms';
+import { createController, EYE_HEIGHT } from './player/controller';
 import { createPlayerModel } from './player/player-model';
 import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { raycastVoxel, type Vec3 } from './player/raycast';
@@ -111,7 +113,14 @@ function findSpawnY(): number {
   return CHUNK_SIZE;
 }
 
-const body = createPlayerBody(SPAWN_XZ.x + 0.5, findSpawnY(), SPAWN_XZ.z + 0.5);
+// Restore posisi player dari save; fall back ke spawn default.
+const saved = loadPlayer();
+const savedY = saved !== null && Number.isFinite(saved.y) ? saved.y : findSpawnY();
+const body = createPlayerBody(
+  saved?.x ?? SPAWN_XZ.x + 0.5,
+  savedY,
+  saved?.z ?? SPAWN_XZ.z + 0.5,
+);
 const spawn = { x: body.x, y: body.y, z: body.z };
 
 // Scratch vector: raycast & highlight tiap frame tanpa alokasi baru.
@@ -144,7 +153,11 @@ const controller = createController(camera, body, () => fpsCamera.isLocked, touc
 const itemDrops = createItemDrops();
 scene.add(itemDrops.group);
 
-let inventory: Inventory = createInventory();
+// Inventory: restore dari save kalau ada, else default.
+let inventory: Inventory =
+  saved !== null && Array.isArray(saved.slots)
+    ? { slots: saved.slots.map((s) => (s === null ? null : { type: s.type as VoxelType, count: s.count })), active: saved.active }
+    : createInventory();
 let target: Vec3 | null = null;
 let heldButton = -1;
 let nextRepeatAt = 0;
@@ -286,6 +299,10 @@ function applyCameraMode(): void {
 
 
 const onFps = createDebugOverlay();
+// Autosave tiap 10 detik: beforeunload tidak handal di mobile (tab bisa
+// dibunuh OS tanpa event). Elapsed dalam detik.
+const AUTOSAVE_INTERVAL = 10;
+let nextAutosaveAt = AUTOSAVE_INTERVAL;
 const loop = startLoop(({ elapsed, delta }) => {
   controller.update();
   updatePhysics(body, delta, chunkManager);
@@ -322,6 +339,10 @@ const loop = startLoop(({ elapsed, delta }) => {
   });
   hotbar.update(inventory);
   renderer.render(scene, camera);
+  if (elapsed >= nextAutosaveAt) {
+    nextAutosaveAt = elapsed + AUTOSAVE_INTERVAL;
+    savePlayer({ x: body.x, y: body.y, z: body.z, slots: inventory.slots, active: inventory.active });
+  }
   onFps(elapsed);
 });
 
@@ -338,7 +359,7 @@ window.addEventListener('resize', () => {
 });
 
 window.addEventListener('beforeunload', () => {
-  blockStore.flush();
+  savePlayer({ x: body.x, y: body.y, z: body.z, slots: inventory.slots, active: inventory.active });
   loop();
   controller.dispose();
   fpsCamera.dispose();
