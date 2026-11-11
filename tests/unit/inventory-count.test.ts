@@ -20,7 +20,7 @@ describe('inventory stack count', () => {
   it('removeItem mengurangi count dan mengosongkan slot saat habis', () => {
     const once = removeItem(createInventory(), 3, 64);
     expect(getCount(once, 3)).toBe(0);
-    expect(once.slots[2]).toBeNull();
+    expect(once.slots[3]).toBeNull();
   });
 
   it('removeItem tidak mengubah apa pun kalau stok kurang', () => {
@@ -30,10 +30,10 @@ describe('inventory stack count', () => {
   });
 
   it('max stack: addItem ke stack penuh memakai slot kosong berikutnya', () => {
-    const inv = createInventory(); // slot 3-8 kosong
+    const inv = createInventory(); // slot 1-3 terisi, 4-8 kosong
     const next = addItem(inv, 1);
     expect(getCount(next, 1)).toBe(MAX_STACK + 1);
-    expect(next.slots[3]).toEqual({ type: 1, count: 1 });
+    expect(next.slots[4]).toEqual({ type: 1, count: 1 });
   });
 
   it('inventory penuh → addItem tidak mengubah apa pun (item hangus)', () => {
@@ -49,7 +49,7 @@ describe('inventory stack count', () => {
   it('addItem menempati slot kosong pertama saat tipe baru', () => {
     const inv = createInventory();
     const next = addItem(inv, 3);
-    // Semua stack stone penuh, jadi masuk slot kosong pertama (index 3).
-    expect(next.slots[3]).toEqual({ type: 3, count: 1 });
+    // Semua stack stone penuh, jadi masuk slot kosong pertama (index 4).
+    expect(next.slots[4]).toEqual({ type: 3, count: 1 });
   });
 });

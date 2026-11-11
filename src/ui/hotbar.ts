@@ -50,6 +50,12 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
     number.textContent = String(i + 1);
     cell.appendChild(number);
 
+    // Slot 0 = tangan kosong: ikon tangan, bukan nomor.
+    if (i === 0) {
+      number.textContent = '✋';
+      number.style.font = '18px monospace';
+    }
+
     // image-rendering: pixelated = wajib biar ikon 32x32 tidak blur saat di-scale.
     const swatch = document.createElement('div');
     swatch.style.cssText =

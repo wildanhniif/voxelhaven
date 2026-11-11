@@ -7,13 +7,13 @@ describe('inventory', () => {
     const next = selectSlot(inv, 4);
     expect(next.active).toBe(4);
     // Fungsi murni: original tidak berubah.
-    expect(inv.active).toBe(0);
+    expect(inv.active).toBe(1);
   });
 
   it('selectSlot dengan index tidak valid → tidak berubah', () => {
     const inv = createInventory();
-    expect(selectSlot(inv, -1).active).toBe(0);
-    expect(selectSlot(inv, 9).active).toBe(0);
+    expect(selectSlot(inv, -1).active).toBe(1);
+    expect(selectSlot(inv, 9).active).toBe(1);
   });
 
   it('getActiveBlock: slot kosong → null', () => {
@@ -22,17 +22,18 @@ describe('inventory', () => {
   });
 
   it('getActiveBlock: slot terisi → tipe blok', () => {
-    const inv = selectSlot(createInventory(), 2);
+    const inv = selectSlot(createInventory(), 3);
     expect(getActiveBlock(inv)).toBe(3);
   });
 
-  it('default: slot 0-2 stack penuh (grass, dirt, stone), sisanya null', () => {
+  it('default: slot 0 tangan kosong, slot 1-3 stack penuh, sisanya null', () => {
     const inv = createInventory();
-    expect(inv.slots.slice(0, 3)).toEqual([
+    expect(inv.slots[0]).toBeNull();
+    expect(inv.slots.slice(1, 4)).toEqual([
       { type: 1, count: 64 },
       { type: 2, count: 64 },
       { type: 3, count: 64 },
     ]);
-    expect(inv.slots.slice(3)).toEqual([null, null, null, null, null, null]);
+    expect(inv.slots.slice(4)).toEqual([null, null, null, null, null]);
   });
 });

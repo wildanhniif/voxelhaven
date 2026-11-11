@@ -1,5 +1,6 @@
-import { BoxGeometry, Color, Group, Mesh, MeshLambertMaterial } from 'three';
-import { BLOCK_COLORS } from '../world/mesher';
+import { Group, Mesh, MeshLambertMaterial } from 'three';
+import { blockBoxGeometry } from '../world/mesher';
+import { atlasTexture } from '../world/texture-atlas';
 import type { BlockSource, VoxelType } from '../world/voxel';
 
 const GRAVITY = 20; // blok/detik^2, sedikit lebih ringan dari player
@@ -17,34 +18,42 @@ interface Drop {
 }
 
 export interface ItemDropsHandle {
-  /** Masukkan ke scene. */
   readonly group: Group;
-  /** Spawn satu item di pusat blok (x, y, z). */
   spawn(type: VoxelType, x: number, y: number, z: number): void;
-  /** Fisika jatuh + pickup. tryPickup return false = item tetap di tanah. */
-  update(delta: number, player: { x: number; y: number; z: number }, world: BlockSource, tryPickup: (type: VoxelType) => boolean): void;
+  update(
+    delta: number,
+    player: { x: number; y: number; z: number },
+    world: BlockSource,
+    tryPickup: (type: VoxelType) => boolean,
+  ): void;
   dispose(): void;
 }
 
-/** Entity item drop: kotak kecil warna blok. */
+let dropMaterial: MeshLambertMaterial | null = null;
+/** Satu material atlas dipakai semua item (UV per geometri sudah di-remap). */
+function material(): MeshLambertMaterial {
+  if (dropMaterial === null) dropMaterial = new MeshLambertMaterial({ map: atlasTexture() });
+  return dropMaterial;
+}
+
+/** Entity item drop: kotak kecil bertekstur blok. */
 function createDrop(type: VoxelType, x: number, y: number, z: number): Drop {
-  const rgb = BLOCK_COLORS[type as Exclude<VoxelType, 0>];
-  const mesh = new Mesh(
-    new BoxGeometry(SIZE, SIZE, SIZE),
-    new MeshLambertMaterial({ color: new Color(rgb[0], rgb[1], rgb[2]) }),
-  );
+  const mesh = new Mesh(blockBoxGeometry(type, SIZE), material());
   mesh.position.set(x, y, z);
   return { type, mesh, pos: { x, y, z }, vy: 0, phase: Math.random() * Math.PI * 2 };
 }
 
-/** Fisika gravitasi sederhana; berhenti di atas blok solid pertama. */
+/** Fisika gravitasi sederhana; berhenti di atas blok solid. */
 function applyGravity(drop: Drop, delta: number, world: BlockSource): void {
   const nextY = drop.pos.y + drop.vy * delta;
-  const probe = Math.floor(nextY - SIZE / 2);
-  const solid =
-    world.getBlock([Math.floor(drop.pos.x), probe, Math.floor(drop.pos.z)]) !== 0;
+  const bottom = nextY - SIZE / 2;
+  const bx = Math.floor(drop.pos.x);
+  const bz = Math.floor(drop.pos.z);
+  const groundY = Math.floor(bottom);
+  const solid = world.getBlock([bx, groundY, bz]) !== 0;
   if (drop.vy <= 0 && solid) {
-    drop.pos.y = probe + 1 + SIZE / 2;
+    // Berhenti tepat di permukaan atas blok.
+    drop.pos.y = groundY + 1 + SIZE / 2;
     drop.vy = 0;
   } else {
     drop.pos.y = nextY;
@@ -71,9 +80,12 @@ export function createItemDrops(): ItemDropsHandle {
         const drop = drops[i]!;
         applyGravity(drop, delta, world);
         drop.mesh.rotation.y += delta * 1.5;
-        drop.mesh.position.set(drop.pos.x, drop.pos.y, drop.pos.z);
-        // Bobbing + rotasi; fase acak per item.
-        drop.mesh.position.y = drop.pos.y + Math.sin(Date.now() / 500 + drop.phase) * 0.05;
+        // Bobbing halus di atas permukaan.
+        drop.mesh.position.set(
+          drop.pos.x,
+          drop.pos.y + Math.sin(Date.now() / 500 + drop.phase) * 0.02,
+          drop.pos.z,
+        );
 
         const dx = drop.pos.x - px;
         const dy = drop.pos.y - (player.y + 0.9);
@@ -81,6 +93,8 @@ export function createItemDrops(): ItemDropsHandle {
         if (Math.hypot(dx, dy, dz) < PICKUP_RANGE && tryPickup(drop.type)) {
           drops.splice(i, 1);
           group.remove(drop.mesh);
+          drop.mesh.geometry.dispose();
+          (drop.mesh.material as MeshLambertMaterial).dispose();
         }
       }
     },
@@ -90,6 +104,8 @@ export function createItemDrops(): ItemDropsHandle {
         (d.mesh.material as MeshLambertMaterial).dispose();
       }
       group.clear();
+      dropMaterial?.dispose();
+      dropMaterial = null;
     },
   };
 }

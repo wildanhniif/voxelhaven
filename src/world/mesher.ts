@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry } from 'three';
+import { BoxGeometry, BufferAttribute, BufferGeometry } from 'three';
 import {
   CHUNK_HEIGHT,
   CHUNK_SIZE,
@@ -42,8 +42,10 @@ const AO_SHADE = [0.75, 0.85, 1, 0.9, 0.95, 0.8] as const;
 const FACE_TOP = 2;
 const FACE_BOTTOM = 3;
 
-/** Tile atlas per jenis blok per face (top, bottom, side). */
-const TILES: Record<Exclude<VoxelType, 0>, { top: AtlasTile; bottom: AtlasTile; side: AtlasTile }> = {
+export const TILES: Record<
+  Exclude<VoxelType, 0>,
+  { top: AtlasTile; bottom: AtlasTile; side: AtlasTile }
+> = {
   1: { top: ATLAS_TILES.grassTop, bottom: ATLAS_TILES.dirt, side: ATLAS_TILES.grassSide },
   2: { top: ATLAS_TILES.dirt, bottom: ATLAS_TILES.dirt, side: ATLAS_TILES.dirt },
   3: { top: ATLAS_TILES.stone, bottom: ATLAS_TILES.stone, side: ATLAS_TILES.stone },
@@ -155,4 +157,24 @@ export function buildChunkGeometry(
 const TILE_UVS = new Map<AtlasTile, { u0: number; v0: number; u1: number; v1: number }>();
 for (const t of Object.values(ATLAS_TILES)) {
   TILE_UVS.set(t, tileUv(t));
+}
+
+/**
+ * BoxGeometry 1x1x1 dengan UV per face di-remap ke tile atlas sesuai jenis
+ * blok (top/bottom/side). Dipakai item drop & held block supaya teksturnya
+ * sama dengan blok di dunia.
+ */
+export function blockBoxGeometry(type: number, size: number): BoxGeometry {
+  const geo = new BoxGeometry(size, size, size);
+  const t = TILES[(type === 0 ? 1 : type) as Exclude<VoxelType, 0>];
+  const uv = geo.getAttribute('uv') as BufferAttribute;
+  for (let face = 0; face < 6; face++) {
+    const tile = face === 2 ? t.top : face === 3 ? t.bottom : t.side;
+    const { u0, v0, u1, v1 } = tileUv(tile);
+    for (let i = 0; i < 4; i++) {
+      const idx = face * 4 + i;
+      uv.setXY(idx, uv.getX(idx) === 0 ? u0 : u1, uv.getY(idx) === 0 ? v0 : v1);
+    }
+  }
+  return geo;
 }

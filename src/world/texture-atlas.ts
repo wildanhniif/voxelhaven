@@ -51,6 +51,14 @@ function paintNoise(
   seedPixels?.(set);
 }
 
+let cachedAtlas: Texture | null = null;
+
+/** Singleton atlas texture (biar tidak buat ulang untuk tiap mesh). */
+export function atlasTexture(): Texture {
+  if (cachedAtlas === null) cachedAtlas = createTextureAtlas();
+  return cachedAtlas;
+}
+
 /**
  * Bangun atlas tekstur 2x2 tile (grass top, grass side, dirt, stone),
  * tiap tile 16x16 px digambar procedural. NearestFilter supaya pixelated.

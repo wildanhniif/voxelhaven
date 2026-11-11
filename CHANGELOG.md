@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [M6.5.4] — Slot tangan kosong, held block bertekstur, fix item ngambang
+Tanggal: 2026-11-11
+
+### Selesai
+- Slot 0 hotbar = tangan kosong (ikon ✋); item mulai slot 1 (HAND_SLOT). Modal awal: slot 1-3 grass/dirt/stone.
+- fpp-arms: held block di ujung tangan kanan pakai geometri bertekstur atlas (blockBoxGeometry), bukan warna solid.
+- Fix item drop ngambang: fisika gravitasi kini cek blok solid di bawah item dan snap ke permukaan atas blok tersebut.
+- Item drop juga pakai tekstur atlas (bukan warna solid).
+
+### Cara Verifikasi Manual
+1. Hotbar: slot kiri ada ikon tangan; slot 1-3 blok (badge 64).
+2. Pilih slot grass → tangan kanan memegang blok grass bertekstur (bukan kotak abu).
+3. Hancurkan blok → item jatuh ke tanah (tidak ngambang), bertekstur sesuai blok.
+
 ## [M6.5.3] — Fix: stack 22 blok dianggap pegang 2 tangan
 Tanggal: 2026-11-11
 

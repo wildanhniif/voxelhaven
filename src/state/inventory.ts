@@ -14,12 +14,15 @@ export interface Inventory {
   active: number;
 }
 
-/** Modal awal: slot 0-2 isi penuh (grass, dirt, stone), sisanya kosong. */
+/** Slot 0 dicadangkan untuk "tangan kosong" (bukan item). */
+export const HAND_SLOT = 0;
+
+/** Modal awal: slot 1-3 isi penuh (grass, dirt, stone), sisanya kosong. */
 export function createInventory(): Inventory {
   const type = (t: VoxelType): ItemStack => ({ type: t, count: MAX_STACK });
   return {
-    slots: [type(1), type(2), type(3), null, null, null, null, null, null],
-    active: 0,
+    slots: [null, type(1), type(2), type(3), null, null, null, null, null],
+    active: 1,
   };
 }
 
@@ -48,7 +51,8 @@ export function addItem(inv: Inventory, type: VoxelType): Inventory {
   const partial = inv.slots.findIndex(
     (s) => s !== null && s.type === type && s.count < MAX_STACK,
   );
-  const empty = inv.slots.findIndex((s) => s === null);
+  // Index 0 = slot tangan kosong, item mulai dari index 1.
+  const empty = inv.slots.findIndex((s, i) => i > HAND_SLOT && s === null);
   const target = partial >= 0 ? partial : empty;
   if (target < 0) return inv; // inventory penuh: item hangus (biarkan caller cek)
 
