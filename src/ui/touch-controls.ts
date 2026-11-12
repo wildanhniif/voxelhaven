@@ -28,6 +28,10 @@ export function createTouchControls(
   // Deteksi sederhana: hanya pasang di perangkat dengan sentuhan.
   if (!('ontouchstart' in window)) return null;
 
+  // Skala kontrol relatif terhadap ukuran layar: basis 800px, clamp supaya
+  // tidak terlalu besar di layar lebar atau terlalu kecil di layar kecil.
+  const scale = Math.min(1.4, Math.max(0.8, Math.min(window.innerWidth, window.innerHeight) / 800));
+  const px = (v: number): string => `${Math.round(v * scale)}px`;
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.inset = '0';
@@ -69,15 +73,15 @@ export function createTouchControls(
     if (top === '') {
       b.style.bottom = bottom;
       b.style.right = right;
-      b.style.width = '72px';
-      b.style.height = '72px';
-      b.style.fontSize = '22px';
+      b.style.width = px(72);
+      b.style.height = px(72);
+      b.style.fontSize = px(22);
     } else {
       b.style.top = top;
       b.style.right = right;
-      b.style.width = '56px';
-      b.style.height = '56px';
-      b.style.fontSize = '26px';
+      b.style.width = px(56);
+      b.style.height = px(56);
+      b.style.fontSize = px(26);
     }
     b.style.pointerEvents = 'auto';
     b.style.touchAction = 'none';
@@ -86,14 +90,14 @@ export function createTouchControls(
   };
 
   // ── Menu (kanan-atas): tombol ☰ membuka panel exit/respawn ──────────
-  const menuBtn = mkBtn('☰', '', '16px', '16px');
+  const menuBtn = mkBtn('☰', '', px(16), px(16));
   // lookArea (top 55%) ditambah belakangan di DOM dan menutupi tombol ini
   // kalau z-index sama; angkat supaya sentuhan sampai ke tombol.
   menuBtn.style.zIndex = '30';
 
   const menuPanel = document.createElement('div');
   menuPanel.style.cssText =
-    'position:absolute;top:80px;right:16px;display:none;flex-direction:column;gap:10px;z-index:30;background:rgba(0,0,0,0.75);border-radius:12px;padding:12px;';
+    `position:absolute;top:${px(80)};right:${px(16)};display:none;flex-direction:column;gap:${px(10)};z-index:30;background:rgba(0,0,0,0.75);border-radius:${px(12)};padding:${px(12)};`;
   container.appendChild(menuPanel);
 
   const mkMenuAction = (text: string, fn: () => void): HTMLDivElement => {
@@ -122,10 +126,10 @@ export function createTouchControls(
   // ── Joystick ─────────────────────────────────────────────────────────
   const base = document.createElement('div');
   base.style.position = 'absolute';
-  base.style.left = '24px';
-  base.style.bottom = '24px';
-  base.style.width = '140px';
-  base.style.height = '140px';
+  base.style.left = px(24);
+  base.style.bottom = px(24);
+  base.style.width = px(140);
+  base.style.height = px(140);
   base.style.borderRadius = '50%';
   base.style.border = '2px solid rgba(255,255,255,0.5)';
   base.style.background = 'rgba(0,0,0,0.2)';
@@ -136,8 +140,8 @@ export function createTouchControls(
   knob.style.left = '50%';
   knob.style.top = '50%';
   knob.style.transform = 'translate(-50%,-50%)';
-  knob.style.width = '60px';
-  knob.style.height = '60px';
+  knob.style.width = px(60);
+  knob.style.height = px(60);
   knob.style.borderRadius = '50%';
   knob.style.background = 'rgba(255,255,255,0.55)';
   base.appendChild(knob);
@@ -165,7 +169,7 @@ export function createTouchControls(
       let dx = t.clientX - cx;
       let dy = t.clientY - cy;
       const len = Math.hypot(dx, dy);
-      const max = JOYSTICK_RADIUS;
+      const max = JOYSTICK_RADIUS * scale;
       if (len > max) {
         dx = (dx / len) * max;
         dy = (dy / len) * max;
@@ -190,7 +194,7 @@ export function createTouchControls(
   container.appendChild(base);
 
   // ── Tombol aksi: tap = place, tahan = break (dengan repeat) ──────────
-  const actionBtn = mkBtn('⛏/⬛', '24px', '24px', '');
+  const actionBtn = mkBtn('⛏/⬛', px(24), px(24), '');
   let holdTimer: ReturnType<typeof setTimeout> | null = null;
   let repeatTimer: ReturnType<typeof setInterval> | null = null;
   let held = false;
@@ -237,7 +241,7 @@ export function createTouchControls(
   });
 
   // Jump.
-  const jumpBtn = mkBtn('⬆', '110px', '110px', '');
+  const jumpBtn = mkBtn('⬆', px(110), px(110), '');
   jumpBtn.addEventListener(
     'touchstart',
     (e) => {

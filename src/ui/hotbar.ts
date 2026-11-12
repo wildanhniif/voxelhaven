@@ -91,7 +91,7 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
   // seluruh 8 slot dan tetap bisa digulir kalau nanti slot bertambah.
   const panel = document.createElement('div');
   panel.style.cssText =
-    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);display:none;grid-template-columns:repeat(10,34px);gap:4px;padding:8px;background:rgba(0,0,0,0.7);border-radius:8px;max-height:55vh;overflow-y:auto;z-index:20;';
+    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);display:none;grid-template-columns:repeat(10,34px);gap:4px;padding:8px;background:rgba(0,0,0,0.7);border-radius:8px;max-width:96vw;max-height:55vh;overflow-y:auto;z-index:20;';
 
   const panelCells: HTMLElement[] = [];
   const panelSwatches: HTMLElement[] = [];
