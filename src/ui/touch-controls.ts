@@ -74,10 +74,10 @@ export function createTouchControls(
     move: { x: 0, z: 0 },
     jump: false,
     dispose() {
-      document.removeEventListener('touchstart', onLookStart);
-      document.removeEventListener('touchmove', onLookMove);
-      document.removeEventListener('touchend', lookEnd);
-      document.removeEventListener('touchcancel', lookEnd);
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
       container.remove();
     },
     setZoomHandler(h) {
@@ -85,76 +85,57 @@ export function createTouchControls(
     },
   };
 
-  let lookId: number | null = null;
-  let lastX = 0;
-  let lastY = 0;
+  // Klasifikasi per jari: jari di atas tombol/joystick tidak ikut look.
+  // Look mendukung beberapa jari sekaligus; pinch aktif hanya saat tepat
+  // dua jari look aktif (Growtopia-style: joystick + look bersamaan).
+  const lookPts = new Map<number, { x: number; y: number }>();
   let pinchDist: number | null = null;
-  let pinchMode = false;
 
-  // Look + pinch di level document agar bekerja di seluruh layar; sentuhan
-  // yang diawali di atas tombol/joystick/menu dikecualikan (lihat isButton).
   const isButton = (el: EventTarget | null): boolean =>
     el instanceof Element && el.closest('[data-tc-btn]') !== null;
 
-  const onLookStart = (e: TouchEvent): void => {
-    const t = e.changedTouches[0];
-    if (t === undefined) return;
-    if (e.touches.length === 2) {
-      // Pinch diizinkan selama jari yang memicu bukan di atas tombol.
-      if (isButton(t.target)) return;
-      pinchMode = true;
-      lookId = null;
-      const a = e.touches[0]!;
-      const b = e.touches[1]!;
-      pinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      return;
-    }
-    if (pinchMode) return;
-    if (isButton(t.target)) return;
-    lookId = t.identifier;
-    lastX = t.clientX;
-    lastY = t.clientY;
+  const pinchLen = (e: TouchEvent): number => {
+    const pts = Array.from(e.touches)
+      .filter((t) => lookPts.has(t.identifier))
+      .map((t) => ({ x: t.clientX, y: t.clientY }));
+    return Math.hypot(pts[0]!.x - pts[1]!.x, pts[0]!.y - pts[1]!.y);
   };
-  const onLookMove = (e: TouchEvent): void => {
-    if (pinchMode) {
-      if (e.touches.length === 2) {
-        const a = e.touches[0]!;
-        const b = e.touches[1]!;
-        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        if (pinchDist !== null && dist !== pinchDist) {
-          // Jari merapat (dist mengecil) = zoom in (kamera mendekat).
-          if (zoomHandler !== null) zoomHandler(dist - pinchDist);
-          pinchDist = dist;
-        }
+
+  const onTouchStart = (e: TouchEvent): void => {
+    for (const t of Array.from(e.changedTouches)) {
+      if (isButton(t.target)) continue;
+      lookPts.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+    if (lookPts.size === 2) pinchDist = pinchLen(e);
+  };
+  const onTouchMove = (e: TouchEvent): void => {
+    if (lookPts.size === 2) {
+      const dist = pinchLen(e);
+      if (pinchDist !== null && dist !== pinchDist) {
+        // Jari merapat = zoom out (menjauh); menjauh = zoom in (mendekat).
+        if (zoomHandler !== null) zoomHandler(pinchDist - dist);
+        pinchDist = dist;
       }
       return;
     }
     for (const t of Array.from(e.changedTouches)) {
-      if (t.identifier !== lookId) continue;
-      camera.applyLook(t.clientX - lastX, t.clientY - lastY);
-      lastX = t.clientX;
-      lastY = t.clientY;
+      const p = lookPts.get(t.identifier);
+      if (p === undefined) continue;
+      camera.applyLook(t.clientX - p.x, t.clientY - p.y);
+      p.x = t.clientX;
+      p.y = t.clientY;
     }
   };
-  const lookEnd = (e: TouchEvent): void => {
-    if (e.touches.length === 0) {
-      pinchDist = null;
-      lookId = null;
-      return;
-    }
-    if (pinchMode && e.touches.length < 2) {
-      pinchMode = false;
-      pinchDist = null;
-      return;
-    }
+  const onTouchEnd = (e: TouchEvent): void => {
     for (const t of Array.from(e.changedTouches)) {
-      if (t.identifier === lookId) lookId = null;
+      lookPts.delete(t.identifier);
     }
+    pinchDist = lookPts.size === 2 ? pinchLen(e) : null;
   };
-  document.addEventListener('touchstart', onLookStart, { passive: false });
-  document.addEventListener('touchmove', onLookMove, { passive: false });
-  document.addEventListener('touchend', lookEnd);
-  document.addEventListener('touchcancel', lookEnd);
+  document.addEventListener('touchstart', onTouchStart, { passive: false });
+  document.addEventListener('touchmove', onTouchMove, { passive: false });
+  document.addEventListener('touchend', onTouchEnd);
+  document.addEventListener('touchcancel', onTouchEnd);
   // ── Tombol keluar (kanan-atas) ────────────────────────────────────────
   const mkBtn = (
     label: string,
@@ -207,9 +188,7 @@ export function createTouchControls(
     el.textContent = text;
     el.style.cssText =
       'padding:10px 18px;font-size:16px;color:white;background:rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;text-align:center;pointer-events:auto;';
-    el.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    el.addEventListener('click', () => {
       menuPanel.style.display = 'none';
       fn();
     });
@@ -246,9 +225,7 @@ export function createTouchControls(
   sensRow.appendChild(sensInput);
   sensRow.appendChild(sensValue);
   menuPanel.appendChild(sensRow);
-  menuBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  menuBtn.addEventListener('click', () => {
     menuPanel.style.display = menuPanel.style.display === 'none' ? 'flex' : 'none';
   });
 
