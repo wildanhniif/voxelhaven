@@ -339,7 +339,11 @@ function boot(worldName: string): void {
     const tpp = fpsCamera.mode === 'TPP' || fpsCamera.mode === 'TPP_FRONT';
     playerModel.group.visible = tpp;
     fppArms.setVisible(!tpp);
-    playerModel.update(body, fpsCamera.yaw, fpsCamera.pitch);
+    // Karakter mengikuti arah gerak joystick, bukan arah kamera: saat tidak
+    // bergerak, tetap hadap arah kamera (seperti berdiri menatap).
+    const moveSpeed = Math.hypot(body.vx, body.vz);
+    const faceYaw = moveSpeed > 0.01 ? Math.atan2(-body.vx, -body.vz) : fpsCamera.yaw;
+    playerModel.update(body, faceYaw, fpsCamera.pitch);
     if (tpp) {
       const py = fpsCamera.viewYaw;
       const pp = fpsCamera.viewPitch;

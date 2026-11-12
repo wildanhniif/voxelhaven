@@ -1,0 +1,9 @@
+
+ RUN  v5.1.0 /data/data/com.termux/files/home/vh
+
+No test files found, exiting with code 1
+
+filter: dbg-col.test.ts
+include: tests/unit/**/*.test.ts
+exclude:  **/node_modules/**, **/.git/**
+
