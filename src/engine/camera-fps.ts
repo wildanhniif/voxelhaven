@@ -69,8 +69,12 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
   // Orbit TPP: offset dari yaw/pitch player, bisa diputar 360° penuh
   // supaya player bisa dilihat dari sudut mana pun tanpa memutar badannya.
   const ORBIT_MAX_PITCH = MathUtils.degToRad(85);
+  // Orbit TPP: offset dari yaw/pitch player, bisa diputar 360° penuh.
+  // pitch dibatasi supaya kamera tidak menyelam ke bawah permukaan (basis
+  // melihat bawah membuat terrain terlihat "hampa" karena face interior
+  // sengaja tidak digenerate).
+  const ORBIT_PITCH_MIN = MathUtils.degToRad(-30);
   let orbitYaw = 0;
-  let orbitPitch = 0;
   // Jarak kamera TPP saat ini; ≤ MIN_TPP_DIST berarti FPP. Diubah kontinu.
   let zoomDist = 0;
 
@@ -116,7 +120,7 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
       pitch = MathUtils.clamp(pitch - dy * SENSITIVITY, -MAX_PITCH, MAX_PITCH);
     } else {
       yaw -= dx * SENSITIVITY;
-      orbitPitch = MathUtils.clamp(orbitPitch - dy * SENSITIVITY, -ORBIT_MAX_PITCH, ORBIT_MAX_PITCH);
+      orbitPitch = MathUtils.clamp(orbitPitch - dy * SENSITIVITY, ORBIT_PITCH_MIN, ORBIT_MAX_PITCH);
     }
     applyRotation();
   };
