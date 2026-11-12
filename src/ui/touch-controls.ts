@@ -74,6 +74,10 @@ export function createTouchControls(
     move: { x: 0, z: 0 },
     jump: false,
     dispose() {
+      document.removeEventListener('touchstart', onLookStart);
+      document.removeEventListener('touchmove', onLookMove);
+      document.removeEventListener('touchend', lookEnd);
+      document.removeEventListener('touchcancel', lookEnd);
       container.remove();
     },
     setZoomHandler(h) {
@@ -81,47 +85,45 @@ export function createTouchControls(
     },
   };
 
-  // ── Area look + pinch zoom ────────────────────────────────────────────
-  const lookArea = document.createElement('div');
-  lookArea.style.position = 'absolute';
-  lookArea.style.left = '0';
-  lookArea.style.top = '0';
-  lookArea.style.width = '100%';
-  // Seluruh layar: supaya geser untuk lihat bekerja di mana pun, termasuk
-  // dekat tombol. Tombol/joystick berada di atas (DOM belakangan) sehingga
-  // tetap menang sentuhannya sendiri.
-  lookArea.style.height = '100%';
-  lookArea.style.touchAction = 'none';
   let lookId: number | null = null;
   let lastX = 0;
   let lastY = 0;
   let pinchDist: number | null = null;
   let pinchMode = false;
 
-  lookArea.addEventListener(
-    'touchstart',
-    (e) => {
+
+  // Look + pinch di level document supaya bekerja di seluruh layar;
+  // sentuhan yang diawali di atas tombol/joystick diabaikan (lihat isButton).
+  const isButton = (el: EventTarget | null): boolean =>
+    el instanceof Element && el.closest('[data-tc-btn]') !== null;
+
+  let touchOnButton = false;
+  const onLookStart = (e: TouchEvent): void => {
+    const t = e.changedTouches[0];
+    if (t === undefined) return;
+    const onButton = isButton(t.target);
+    if (e.touches.length === 2) {
+      // Pinch hanya kalau tidak ada jari yang sedang memegang tombol.
+      if (onButton || touchOnButton) return;
+      pinchMode = true;
+      lookId = null;
+      const a = e.touches[0]!;
+      const b = e.touches[1]!;
+      pinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      return;
+    }
+    if (pinchMode) return;
+    if (onButton) {
+      touchOnButton = true;
+      return;
+    }
+    lookId = t.identifier;
+    lastX = t.clientX;
+    lastY = t.clientY;
+  };
+  const onLookMove = (e: TouchEvent): void => {
+    if (pinchMode) {
       if (e.touches.length === 2) {
-        pinchMode = true;
-        lookId = null;
-        const a = e.touches[0]!;
-        const b = e.touches[1]!;
-        pinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      } else if (e.touches.length === 1) {
-        const t = e.changedTouches[0];
-        if (t === undefined) return;
-        lookId = t.identifier;
-        lastX = t.clientX;
-        lastY = t.clientY;
-      }
-    },
-    { passive: false },
-  );
-  lookArea.addEventListener(
-    'touchmove',
-    (e) => {
-      e.preventDefault();
-      if (pinchMode && e.touches.length === 2) {
         const a = e.touches[0]!;
         const b = e.touches[1]!;
         const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -130,19 +132,25 @@ export function createTouchControls(
           if (zoomHandler !== null) zoomHandler(pinchDist - dist);
           pinchDist = dist;
         }
-        return;
       }
-      if (pinchMode) return;
-      for (const t of Array.from(e.changedTouches)) {
-        if (t.identifier !== lookId) continue;
-        camera.applyLook(t.clientX - lastX, t.clientY - lastY);
-        lastX = t.clientX;
-        lastY = t.clientY;
-      }
-    },
-    { passive: false },
-  );
+      return;
+    }
+    for (const t of Array.from(e.changedTouches)) {
+      if (t.identifier !== lookId) continue;
+      camera.applyLook(t.clientX - lastX, t.clientY - lastY);
+      lastX = t.clientX;
+      lastY = t.clientY;
+    }
+  };
   const lookEnd = (e: TouchEvent): void => {
+    // Semua jari lepas: reset penanda tombol & pinch.
+    if (e.touches.length === 0) {
+      touchOnButton = false;
+      pinchMode = false;
+      pinchDist = null;
+      lookId = null;
+      return;
+    }
     if (pinchMode && e.touches.length < 2) {
       pinchMode = false;
       pinchDist = null;
@@ -152,9 +160,10 @@ export function createTouchControls(
       if (t.identifier === lookId) lookId = null;
     }
   };
-  lookArea.addEventListener('touchend', lookEnd);
-  lookArea.addEventListener('touchcancel', lookEnd);
-  container.appendChild(lookArea);
+  document.addEventListener('touchstart', onLookStart, { passive: false });
+  document.addEventListener('touchmove', onLookMove, { passive: false });
+  document.addEventListener('touchend', lookEnd);
+  document.addEventListener('touchcancel', lookEnd);
   // ── Tombol keluar (kanan-atas) ────────────────────────────────────────
   const mkBtn = (
     label: string,
@@ -186,23 +195,21 @@ export function createTouchControls(
     }
     b.style.pointerEvents = 'auto';
     b.style.touchAction = 'none';
-    // lookArea penuh menutupi layar; angkat tombol di atasnya supaya
-    // sentuhan tombol tidak ter-rayap oleh area look.
-    b.style.zIndex = '20';
+    // Penanda: handler look di level document mengabaikan sentuhan yang
+    // diawali di elemen bertanda ini (tombol menangani sendiri).
+    b.dataset.tcBtn = '';
     container.appendChild(b);
     return b;
   };
 
   // ── Menu (kanan-atas): tombol ☰ membuka panel exit/respawn ──────────
   const menuBtn = mkBtn('☰', '', px(16), px(16));
-  // lookArea (top 55%) ditambah belakangan di DOM dan menutupi tombol ini
-  // kalau z-index sama; angkat supaya sentuhan sampai ke tombol.
   menuBtn.style.zIndex = '30';
 
   const menuPanel = document.createElement('div');
   menuPanel.style.cssText =
     `position:absolute;top:${px(80)};right:${px(16)};display:none;flex-direction:column;gap:${px(10)};z-index:30;background:rgba(0,0,0,0.75);border-radius:${px(12)};padding:${px(12)};`;
-  container.appendChild(menuPanel);
+  menuPanel.dataset.tcBtn = '';
 
   const mkMenuAction = (text: string, fn: () => void): HTMLDivElement => {
     const el = document.createElement('div');
@@ -265,8 +272,8 @@ export function createTouchControls(
   base.style.border = '2px solid rgba(255,255,255,0.5)';
   base.style.background = 'rgba(0,0,0,0.2)';
   base.style.pointerEvents = 'auto';
-  // lookArea penuh menutupi layar; angkat joystick di atasnya.
-  base.style.zIndex = '20';
+  // Joystick menangani dragnya sendiri; kecualikan dari handler look.
+  base.dataset.tcBtn = '';
   const knob = document.createElement('div');
   knob.style.position = 'absolute';
   knob.style.left = '50%';
