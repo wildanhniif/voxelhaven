@@ -129,7 +129,7 @@ export function createTouchControls(
         const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
         if (pinchDist !== null && dist !== pinchDist) {
           // Jari merapat = zoom in (kamera mendekat); menjauh = zoom out.
-          if (zoomHandler !== null) zoomHandler(pinchDist - dist);
+          if (zoomHandler !== null) zoomHandler(dist - pinchDist);
           pinchDist = dist;
         }
       }
