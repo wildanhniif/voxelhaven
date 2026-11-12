@@ -107,14 +107,15 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
 
   /**
    * Putar kamera dari delta layar (px). Dipakai mouse (movementX/Y) dan
-   * drag sentuh. TPP memutar orbit, FPP memutar badan player.
+   * drag sentuh. Selalu memutar badan player (yaw) supaya karakter tidak
+   * kaku; TPP hanya menambah orbit pitch (lihat atas/bawah).
    */
   const applyLook = (dx: number, dy: number): void => {
     if (mode === 'FPP') {
       yaw -= dx * SENSITIVITY;
       pitch = MathUtils.clamp(pitch - dy * SENSITIVITY, -MAX_PITCH, MAX_PITCH);
     } else {
-      orbitYaw -= dx * SENSITIVITY;
+      yaw -= dx * SENSITIVITY;
       orbitPitch = MathUtils.clamp(orbitPitch - dy * SENSITIVITY, -ORBIT_MAX_PITCH, ORBIT_MAX_PITCH);
     }
     applyRotation();

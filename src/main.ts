@@ -190,6 +190,15 @@ function boot(worldName: string): void {
       url.search = '';
       window.location.href = url.toString();
     },
+    () => {
+      // Respawn: pindah ke titik spawn dunia & reset kecepatan.
+      body.x = spawn.x;
+      body.y = spawn.y;
+      body.z = spawn.z;
+      body.vx = 0;
+      body.vy = 0;
+      body.vz = 0;
+    },
   );
   if (touchControls !== null) {
     touchControls.setZoomHandler((delta) => fpsCamera.zoomCamera(delta));

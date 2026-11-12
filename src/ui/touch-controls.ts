@@ -4,7 +4,7 @@ export interface TouchControls {
   move: TouchMove;
   jump: boolean;
   dispose(): void;
-  /** Set handler pinch-zoom (delta px; positif = jari menjauh). */
+  /** Set handler pinch-zoom (delta px; jari menjauh). */
   setZoomHandler(h: (deltaPx: number) => void): void;
 }
 
@@ -23,6 +23,7 @@ export function createTouchControls(
   camera: { applyLook(dx: number, dy: number): void },
   onAction: (button: number) => void,
   onExit: () => void,
+  onRespawn: () => void,
 ): TouchControls | null {
   // Deteksi sederhana: hanya pasang di perangkat dengan sentuhan.
   if (!('ontouchstart' in window)) return null;
@@ -84,14 +85,38 @@ export function createTouchControls(
     return b;
   };
 
-  const exitBtn = mkBtn('⏻', '', '16px', '16px');
+  // ── Menu (kanan-atas): tombol ☰ membuka panel exit/respawn ──────────
+  const menuBtn = mkBtn('☰', '', '16px', '16px');
   // lookArea (top 55%) ditambah belakangan di DOM dan menutupi tombol ini
   // kalau z-index sama; angkat supaya sentuhan sampai ke tombol.
-  exitBtn.style.zIndex = '30';
-  exitBtn.addEventListener('touchstart', (e) => {
+  menuBtn.style.zIndex = '30';
+
+  const menuPanel = document.createElement('div');
+  menuPanel.style.cssText =
+    'position:absolute;top:80px;right:16px;display:none;flex-direction:column;gap:10px;z-index:30;background:rgba(0,0,0,0.75);border-radius:12px;padding:12px;';
+  container.appendChild(menuPanel);
+
+  const mkMenuAction = (text: string, fn: () => void): HTMLDivElement => {
+    const el = document.createElement('div');
+    el.textContent = text;
+    el.style.cssText =
+      'padding:10px 18px;font-size:16px;color:white;background:rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;text-align:center;pointer-events:auto;';
+    el.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      menuPanel.style.display = 'none';
+      fn();
+    });
+    return el;
+  };
+
+  menuPanel.appendChild(mkMenuAction('Respawn', onRespawn));
+  menuPanel.appendChild(mkMenuAction('Keluar', onExit));
+
+  menuBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    onExit();
+    menuPanel.style.display = menuPanel.style.display === 'none' ? 'flex' : 'none';
   });
 
   // ── Joystick ─────────────────────────────────────────────────────────
