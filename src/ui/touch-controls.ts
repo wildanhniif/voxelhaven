@@ -28,10 +28,14 @@ export function createTouchControls(
   // Deteksi sederhana: hanya pasang di perangkat dengan sentuhan.
   if (!('ontouchstart' in window)) return null;
 
-  // Skala kontrol relatif terhadap ukuran layar: basis 800px, clamp supaya
-  // tidak terlalu besar di layar lebar atau terlalu kecil di layar kecil.
-  const scale = Math.min(1.4, Math.max(0.8, Math.min(window.innerWidth, window.innerHeight) / 800));
+  // Skala kontrol dari luas layar (akar lebar×tinggi): basis 800px, clamp
+  // supaya tidak terlalu kecil di HP kecil atau terlalu besar di tablet.
+  const scale = Math.min(
+    1.5,
+    Math.max(0.7, Math.sqrt(window.innerWidth * window.innerHeight) / 800),
+  );
   const px = (v: number): string => `${Math.round(v * scale)}px`;
+
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.inset = '0';
