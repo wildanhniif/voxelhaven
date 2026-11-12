@@ -14,6 +14,27 @@ const HOLD_MS = 250;
 /** Interval repeat break saat tombol ditahan. */
 const REPEAT_MS = 200;
 
+// Key di luar prefix "voxel-sandbox:" (data world) supaya setting user
+// tidak ikut terhapus saat "Hapus semua world".
+const SENS_KEY = 'voxelhaven:sensitivity:v1';
+
+export function loadSensitivity(): number {
+  try {
+    const raw = localStorage.getItem(SENS_KEY);
+    return raw === null ? 1 : Number(raw);
+  } catch {
+    return 1;
+  }
+}
+
+function saveSensitivity(mult: number): void {
+  try {
+    localStorage.setItem(SENS_KEY, String(mult));
+  } catch {
+    // localStorage tidak tersedia: abaikan.
+  }
+}
+
 /**
  * Kontrol sentuh untuk mobile: joystick kiri (gerak), drag area kanan (lihat),
  * pinch zoom (jarak kamera), tombol aksi (tap = place, tahan = break) +
@@ -25,6 +46,7 @@ export function createTouchControls(
   onExit: () => void,
   onRespawn: () => void,
   onClearWorlds: () => void,
+  onSensitivity: (mult: number) => void,
 ): TouchControls | null {
   // Deteksi sederhana: hanya pasang di perangkat dengan sentuhan.
   if (!('ontouchstart' in window)) return null;
@@ -59,6 +81,80 @@ export function createTouchControls(
     },
   };
 
+  // ── Area look + pinch zoom ────────────────────────────────────────────
+  const lookArea = document.createElement('div');
+  lookArea.style.position = 'absolute';
+  lookArea.style.left = '0';
+  lookArea.style.top = '0';
+  lookArea.style.width = '100%';
+  // Seluruh layar: supaya geser untuk lihat bekerja di mana pun, termasuk
+  // dekat tombol. Tombol/joystick berada di atas (DOM belakangan) sehingga
+  // tetap menang sentuhannya sendiri.
+  lookArea.style.height = '100%';
+  lookArea.style.touchAction = 'none';
+  let lookId: number | null = null;
+  let lastX = 0;
+  let lastY = 0;
+  let pinchDist: number | null = null;
+  let pinchMode = false;
+
+  lookArea.addEventListener(
+    'touchstart',
+    (e) => {
+      if (e.touches.length === 2) {
+        pinchMode = true;
+        lookId = null;
+        const a = e.touches[0]!;
+        const b = e.touches[1]!;
+        pinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      } else if (e.touches.length === 1) {
+        const t = e.changedTouches[0];
+        if (t === undefined) return;
+        lookId = t.identifier;
+        lastX = t.clientX;
+        lastY = t.clientY;
+      }
+    },
+    { passive: false },
+  );
+  lookArea.addEventListener(
+    'touchmove',
+    (e) => {
+      e.preventDefault();
+      if (pinchMode && e.touches.length === 2) {
+        const a = e.touches[0]!;
+        const b = e.touches[1]!;
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        if (pinchDist !== null && dist !== pinchDist) {
+          // Jari merapat = zoom in (kamera mendekat); menjauh = zoom out.
+          if (zoomHandler !== null) zoomHandler(pinchDist - dist);
+          pinchDist = dist;
+        }
+        return;
+      }
+      if (pinchMode) return;
+      for (const t of Array.from(e.changedTouches)) {
+        if (t.identifier !== lookId) continue;
+        camera.applyLook(t.clientX - lastX, t.clientY - lastY);
+        lastX = t.clientX;
+        lastY = t.clientY;
+      }
+    },
+    { passive: false },
+  );
+  const lookEnd = (e: TouchEvent): void => {
+    if (pinchMode && e.touches.length < 2) {
+      pinchMode = false;
+      pinchDist = null;
+      return;
+    }
+    for (const t of Array.from(e.changedTouches)) {
+      if (t.identifier === lookId) lookId = null;
+    }
+  };
+  lookArea.addEventListener('touchend', lookEnd);
+  lookArea.addEventListener('touchcancel', lookEnd);
+  container.appendChild(lookArea);
   // ── Tombol keluar (kanan-atas) ────────────────────────────────────────
   const mkBtn = (
     label: string,
@@ -90,6 +186,9 @@ export function createTouchControls(
     }
     b.style.pointerEvents = 'auto';
     b.style.touchAction = 'none';
+    // lookArea penuh menutupi layar; angkat tombol di atasnya supaya
+    // sentuhan tombol tidak ter-rayap oleh area look.
+    b.style.zIndex = '20';
     container.appendChild(b);
     return b;
   };
@@ -123,6 +222,32 @@ export function createTouchControls(
   menuPanel.appendChild(mkMenuAction('Keluar', onExit));
   menuPanel.appendChild(mkMenuAction('Hapus semua world', onClearWorlds));
 
+  // Setting kepekaan look: slider 0.2x..3x, tersimpan di localStorage.
+  const sensRow = document.createElement('div');
+  sensRow.style.cssText = 'display:flex;align-items:center;gap:8px;pointer-events:auto;';
+  const sensLabel = document.createElement('span');
+  sensLabel.textContent = 'Sensitivitas';
+  sensLabel.style.cssText = 'font-size:14px;color:white;';
+  const sensInput = document.createElement('input');
+  sensInput.type = 'range';
+  sensInput.min = '0.2';
+  sensInput.max = '3';
+  sensInput.step = '0.1';
+  sensInput.value = String(loadSensitivity());
+  sensInput.style.width = '120px';
+  const sensValue = document.createElement('span');
+  sensValue.textContent = sensInput.value + 'x';
+  sensValue.style.cssText = 'font-size:14px;color:white;';
+  sensInput.addEventListener('input', () => {
+    const mult = Number(sensInput.value);
+    sensValue.textContent = `${mult.toFixed(1)}x`;
+    saveSensitivity(mult);
+    onSensitivity(mult);
+  });
+  sensRow.appendChild(sensLabel);
+  sensRow.appendChild(sensInput);
+  sensRow.appendChild(sensValue);
+  menuPanel.appendChild(sensRow);
   menuBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -140,7 +265,8 @@ export function createTouchControls(
   base.style.border = '2px solid rgba(255,255,255,0.5)';
   base.style.background = 'rgba(0,0,0,0.2)';
   base.style.pointerEvents = 'auto';
-  base.style.touchAction = 'none';
+  // lookArea penuh menutupi layar; angkat joystick di atasnya.
+  base.style.zIndex = '20';
   const knob = document.createElement('div');
   knob.style.position = 'absolute';
   knob.style.left = '50%';
@@ -261,78 +387,6 @@ export function createTouchControls(
     { passive: false },
   );
 
-  // ── Area look + pinch zoom ────────────────────────────────────────────
-  const lookArea = document.createElement('div');
-  lookArea.style.position = 'absolute';
-  lookArea.style.left = '0';
-  lookArea.style.top = '0';
-  lookArea.style.width = '100%';
-  lookArea.style.height = '55%';
-  lookArea.style.pointerEvents = 'auto';
-  lookArea.style.touchAction = 'none';
-  let lookId: number | null = null;
-  let lastX = 0;
-  let lastY = 0;
-  let pinchDist: number | null = null;
-  let pinchMode = false;
-
-  lookArea.addEventListener(
-    'touchstart',
-    (e) => {
-      if (e.touches.length === 2) {
-        pinchMode = true;
-        lookId = null;
-        const a = e.touches[0]!;
-        const b = e.touches[1]!;
-        pinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      } else if (e.touches.length === 1) {
-        const t = e.changedTouches[0];
-        if (t === undefined) return;
-        lookId = t.identifier;
-        lastX = t.clientX;
-        lastY = t.clientY;
-      }
-    },
-    { passive: false },
-  );
-  lookArea.addEventListener(
-    'touchmove',
-    (e) => {
-      e.preventDefault();
-      if (pinchMode && e.touches.length === 2) {
-        const a = e.touches[0]!;
-        const b = e.touches[1]!;
-        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        if (pinchDist !== null && dist !== pinchDist) {
-          // Jari merapat = zoom in (kamera mendekat); menjauh = zoom out.
-          if (zoomHandler !== null) zoomHandler(pinchDist - dist);
-          pinchDist = dist;
-        }
-        return;
-      }
-      if (pinchMode) return;
-      for (const t of Array.from(e.changedTouches)) {
-        if (t.identifier !== lookId) continue;
-        camera.applyLook(t.clientX - lastX, t.clientY - lastY);
-        lastX = t.clientX;
-        lastY = t.clientY;
-      }
-    },
-    { passive: false },
-  );
-  const lookEnd = (e: TouchEvent): void => {
-    if (pinchMode && e.touches.length < 2) {
-      pinchMode = false;
-      pinchDist = null;
-      return;
-    }
-    for (const t of Array.from(e.changedTouches)) {
-      if (t.identifier === lookId) lookId = null;
-    }
-  };
-  lookArea.addEventListener('touchend', lookEnd);
-  lookArea.addEventListener('touchcancel', lookEnd);
-  container.appendChild(lookArea);
 
   return controls;
 }

@@ -55,6 +55,9 @@ export interface FpsCameraHandle {
   zoomCamera(deltaPx: number): void;
   /** Jarak kamera TPP saat ini (blok); 0 = FPP. */
   readonly zoomDistance: number;
+  /** Pengali kepekaan look (1 = default). Dipakai menu setting. */
+  setLookSensitivity(mult: number): void;
+  readonly lookSensitivity: number;
   dispose(): void;
 }
 /**
@@ -77,6 +80,9 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
   let orbitYaw = 0;
   let orbitPitch = 0;
   let zoomDist = 0;
+
+  // Pengali kepekaan look; 1 = default. Bisa diubah dari menu setting.
+  let sens = 1;
 
   const onKey = (event: KeyboardEvent): void => {
     if (event.code !== 'F5') return;
@@ -115,12 +121,14 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
    * kaku; TPP hanya menambah orbit pitch (lihat atas/bawah).
    */
   const applyLook = (dx: number, dy: number): void => {
+    // sens = pengali kepekaan dari menu setting (1 = default).
+    const s = SENSITIVITY * sens;
     if (mode === 'FPP') {
-      yaw -= dx * SENSITIVITY;
-      pitch = MathUtils.clamp(pitch - dy * SENSITIVITY, -MAX_PITCH, MAX_PITCH);
+      yaw -= dx * s;
+      pitch = MathUtils.clamp(pitch - dy * s, -MAX_PITCH, MAX_PITCH);
     } else {
-      yaw -= dx * SENSITIVITY;
-      orbitPitch = MathUtils.clamp(orbitPitch - dy * SENSITIVITY, ORBIT_PITCH_MIN, ORBIT_MAX_PITCH);
+      yaw -= dx * s;
+      orbitPitch = MathUtils.clamp(orbitPitch - dy * s, ORBIT_PITCH_MIN, ORBIT_MAX_PITCH);
     }
     applyRotation();
   };
@@ -184,6 +192,12 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     },
     get zoomDistance() {
       return zoomDist;
+    },
+    setLookSensitivity(mult: number) {
+      sens = Math.max(0.1, Math.min(5, mult));
+    },
+    get lookSensitivity() {
+      return sens;
     },
     applyLook,
     zoomCamera,

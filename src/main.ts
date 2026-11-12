@@ -25,7 +25,7 @@ import {
   type Chunk,
   type TerrainConfig,
 } from './world/terrain';
-import { createTouchControls } from './ui/touch-controls';
+import { createTouchControls, loadSensitivity } from './ui/touch-controls';
 import { loadPlayer, savePlayer } from './state/player-save';
 import { clearAllWorlds, recordWorld, worldSeed } from './state/world-manager';
 import type { VoxelType } from './world/voxel';
@@ -165,6 +165,8 @@ function boot(worldName: string): void {
   scene.add(highlight);
 
   const fpsCamera = createFpsCamera(camera, renderer.domElement);
+  // Terapkan kepekaan look tersimpan (diatur lewat menu ☰ > Sensitivitas).
+  fpsCamera.setLookSensitivity(loadSensitivity());
 
   const playerModel = createPlayerModel();
   scene.add(playerModel.group);
@@ -210,7 +212,11 @@ function boot(worldName: string): void {
       url.search = '';
       window.location.href = url.toString();
     },
-   );
+    (mult) => {
+      // Slider sensitivitas di menu: langsung dipakai kamera.
+      fpsCamera.setLookSensitivity(mult);
+    },
+  );
   if (touchControls !== null) {
     touchControls.setZoomHandler((delta) => fpsCamera.zoomCamera(delta));
   }
