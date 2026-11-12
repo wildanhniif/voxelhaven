@@ -8,6 +8,8 @@ const SENSITIVITY = 0.0022;
 export const TPP_DISTANCE = 4;
 const TPP_STEP = 0.1;
 const TPP_MARGIN = 0.2;
+/** Ambang akumulasi pinch (px) untuk toggle FPP ↔ TPP. */
+const ZOOM_THRESHOLD = 60;
 
 export type CameraMode = 'FPP' | 'TPP' | 'TPP_FRONT';
 
@@ -43,6 +45,11 @@ export interface FpsCameraHandle {
   readonly mode: CameraMode;
   /** Putar kamera dari delta px layar; touch drag memakai ini. */
   applyLook(dx: number, dy: number): void;
+  /**
+   * Pinch-zoom: geser antara FPP dan TPP berdasarkan delta px.
+   * deltaPx positif = jari menjauh = kamera menjauh (ke TPP).
+   */
+  zoomCamera(deltaPx: number): void;
   dispose(): void;
 }
 /**
@@ -59,6 +66,8 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
   const ORBIT_MAX_PITCH = MathUtils.degToRad(85);
   let orbitYaw = 0;
   let orbitPitch = 0;
+  // Akumulator pinch-zoom; melewati ambang → toggle FPP ↔ TPP.
+  let zoomAccum = 0;
 
   const onKey = (event: KeyboardEvent): void => {
     if (event.code !== 'F5') return;
@@ -104,6 +113,25 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     applyRotation();
   };
 
+  /**
+   * Pinch-zoom: akumulasi delta; ambang ZOOM_THRESHOLD memicu toggle.
+   */
+  const zoomCamera = (deltaPx: number): void => {
+    zoomAccum += deltaPx;
+    if (zoomAccum > ZOOM_THRESHOLD) {
+      zoomAccum = 0;
+      if (mode === 'FPP') {
+        mode = 'TPP';
+        applyRotation();
+      }
+    } else if (zoomAccum < -ZOOM_THRESHOLD) {
+      zoomAccum = 0;
+      if (mode !== 'FPP') {
+        mode = 'FPP';
+        applyRotation();
+      }
+    }
+  };
   const onMouseMove = (event: MouseEvent): void => {
     if (document.pointerLockElement !== domElement) return;
     applyLook(event.movementX, event.movementY);
@@ -147,6 +175,7 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
       return mode;
     },
     applyLook,
+    zoomCamera,
     dispose() {
       domElement.removeEventListener('click', onClick);
       document.removeEventListener('mousemove', onMouseMove);

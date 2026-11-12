@@ -95,7 +95,7 @@ export function createTextureAtlas(): Texture {
   });
 
   // Tile 2: dirt.
-  paintNoise(ctx, 0, TILE_PX, [134, 96, 60], 14, random, (set) => {
+  paintNoise(ctx, 2 * TILE_PX, 0, [134, 96, 60], 14, random, (set) => {
     for (let i = 0; i < 10; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
@@ -104,7 +104,7 @@ export function createTextureAtlas(): Texture {
   });
 
   // Tile 3: stone (abu-abu dengan kerikil gelap).
-  paintNoise(ctx, TILE_PX, TILE_PX, [128, 128, 132], 12, random, (set) => {
+  paintNoise(ctx, 0, TILE_PX, [128, 128, 132], 12, random, (set) => {
     for (let i = 0; i < 14; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);

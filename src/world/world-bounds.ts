@@ -5,10 +5,10 @@ import { CHUNK_HEIGHT } from './terrain';
  * Dipakai terrain, chunk-manager, block-edit, dan collision supaya tidak ada
  * dua definisi batas yang bisa berbeda.
  */
-export const WORLD_SIZE = 256;
+export const WORLD_SIZE = 64;
 export const WORLD_HEIGHT = CHUNK_HEIGHT;
 /** Jumlah chunk per sumbu; WORLD_SIZE harus kelipatan bulat CHUNK_SIZE. */
-export const WORLD_CHUNKS = 8;
+export const WORLD_CHUNKS = 2;
 
 export function inWorldXZ(x: number, z: number): boolean {
   return x >= 0 && x < WORLD_SIZE && z >= 0 && z < WORLD_SIZE;
