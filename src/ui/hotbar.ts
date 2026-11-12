@@ -2,6 +2,9 @@ import type { Inventory } from '../state/inventory';
 import { BLOCK_NAMES } from './block-names';
 import { blockIconDataUrl, ATLAS_TILES, type AtlasTile } from '../world/texture-atlas';
 
+/** Jumlah slot yang tampil di hotbar (sisanya via panel inventory). */
+const HOTBAR_VISIBLE = 4;
+
 export interface HotbarHandle {
   update(inv: Inventory): void;
   dispose(): void;
@@ -22,12 +25,41 @@ function blockIcon(type: number): string {
   return blockIconDataUrl(top, side);
 }
 
-/**
- * Hotbar 9 slot di bawah layar (DOM overlay).
- * Highlight slot aktif + nama blok aktif sebagai label.
- * Ikon slot = render isometric blok (top + 2 sisi), pixelated tanpa smoothing.
- * Badge jumlah (pojok kanan bawah slot); slot kosong gelap.
- */
+function slotCell(onSlotSelected: (index: number) => void, i: number): {
+  cell: HTMLElement;
+  swatch: HTMLElement;
+  number: HTMLElement;
+  badge: HTMLElement;
+} {
+  const cell = document.createElement('div');
+  cell.style.cssText =
+    'width:40px;height:40px;box-sizing:border-box;border:2px solid rgba(255,255,255,0.35);display:flex;align-items:center;justify-content:center;font:12px monospace;color:#fff;cursor:pointer;position:relative;';
+
+  const number = document.createElement('span');
+  number.textContent = String(i + 1);
+  cell.appendChild(number);
+
+  // Slot 0 = tangan kosong: ikon tangan, bukan nomor.
+  if (i === 0) {
+    number.textContent = '✋';
+    number.style.font = '18px monospace';
+  }
+
+  // image-rendering: pixelated = wajib biar ikon 32x32 tidak blur saat di-scale.
+  const swatch = document.createElement('div');
+  swatch.style.cssText =
+    'width:28px;height:28px;display:none;background-size:contain;background-position:center;background-repeat:no-repeat;image-rendering:pixelated;';
+  cell.appendChild(swatch);
+
+  const badge = document.createElement('span');
+  badge.style.cssText =
+    'position:absolute;right:2px;bottom:0;font:11px monospace;color:#fff;text-shadow:0 1px 2px #000;';
+  cell.appendChild(badge);
+
+  cell.addEventListener('click', () => onSlotSelected(i));
+  return { cell, swatch, number, badge };
+}
+
 export function createHotbar(onSlotSelected: (index: number) => void): HotbarHandle {
   const root = document.createElement('div');
   root.style.cssText =
@@ -42,75 +74,124 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
   const numbers: HTMLElement[] = [];
   const badges: HTMLElement[] = [];
 
-  for (let i = 0; i < 9; i++) {
-    const cell = document.createElement('div');
-    cell.style.cssText =
-      'width:40px;height:40px;box-sizing:border-box;border:2px solid rgba(255,255,255,0.35);display:flex;align-items:center;justify-content:center;font:12px monospace;color:#fff;cursor:pointer;position:relative;';
-
-    // Nomor slot: label terpisah supaya tidak menimpa swatch.
-    const number = document.createElement('span');
-    number.textContent = String(i + 1);
-    cell.appendChild(number);
-
-    // Slot 0 = tangan kosong: ikon tangan, bukan nomor.
-    if (i === 0) {
-      number.textContent = '✋';
-      number.style.font = '18px monospace';
-    }
-
-    // image-rendering: pixelated = wajib biar ikon 32x32 tidak blur saat di-scale.
-    const swatch = document.createElement('div');
-    swatch.style.cssText =
-      'width:28px;height:28px;display:none;background-size:contain;background-position:center;background-repeat:no-repeat;image-rendering:pixelated;';
-    cell.appendChild(swatch);
-
-    // Badge jumlah (pojok kanan bawah slot).
-    const badge = document.createElement('span');
-    badge.style.cssText =
-      'position:absolute;right:2px;bottom:0;font:11px monospace;color:#fff;text-shadow:0 1px 2px #000;';
-    cell.appendChild(badge);
-
-    cell.addEventListener('click', () => onSlotSelected(i));
-    cells.push(cell);
-    swatches.push(swatch);
-    numbers.push(number);
-    badges.push(badge);
-    root.appendChild(cell);
+  for (let i = 0; i < HOTBAR_VISIBLE; i++) {
+    const parts = slotCell(onSlotSelected, i);
+    cells.push(parts.cell);
+    swatches.push(parts.swatch);
+    numbers.push(parts.number);
+    badges.push(parts.badge);
+    root.appendChild(parts.cell);
   }
+
+  // �── Panel inventory (swipe up / tap handle) ────────────────────────
+  const panel = document.createElement('div');
+  panel.style.cssText =
+    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);display:none;flex-wrap:wrap;gap:4px;padding:8px;background:rgba(0,0,0,0.6);border-radius:8px;width:184px;z-index:20;';
+
+  const panelCells: HTMLElement[] = [];
+  const panelSwatches: HTMLElement[] = [];
+  const panelNumbers: HTMLElement[] = [];
+  const panelBadges: HTMLElement[] = [];
+  for (let i = 0; i < 8; i++) {
+    const parts = slotCell(onSlotSelected, i);
+    panelCells.push(parts.cell);
+    panelSwatches.push(parts.swatch);
+    panelNumbers.push(parts.number);
+    panelBadges.push(parts.badge);
+    panel.appendChild(parts.cell);
+  }
+
+  const handle = document.createElement('div');
+  handle.textContent = '▲';
+  handle.style.cssText =
+    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);font:14px monospace;color:rgba(255,255,255,0.8);text-shadow:0 1px 2px #000;cursor:pointer;z-index:20;';
+
+  let panelOpen = false;
+  const setPanelOpen = (open: boolean): void => {
+    panelOpen = open;
+    panel.style.display = open ? 'flex' : 'none';
+    handle.textContent = open ? '▼' : '▲';
+  };
+  handle.addEventListener('click', () => setPanelOpen(!panelOpen));
 
   document.body.appendChild(root);
   document.body.appendChild(label);
+  document.body.appendChild(panel);
+  document.body.appendChild(handle);
+
+  // Swipe up di hotbar → buka panel; swipe down di panel → tutup.
+  let touchStartY: number | null = null;
+  root.addEventListener(
+    'touchstart',
+    (e) => {
+      touchStartY = e.touches[0]?.clientY ?? null;
+    },
+    { passive: true },
+  );
+  root.addEventListener(
+    'touchend',
+    (e) => {
+      const endY = e.changedTouches[0]?.clientY ?? null;
+      if (touchStartY === null || endY === null) return;
+      if (endY - touchStartY < -30) setPanelOpen(true);
+      touchStartY = null;
+    },
+    { passive: true },
+  );
+  panel.addEventListener(
+    'touchend',
+    (e) => {
+      const endY = e.changedTouches[0]?.clientY ?? null;
+      if (endY !== null && touchStartY !== null && endY - touchStartY > 30) setPanelOpen(false);
+    },
+    { passive: true },
+  );
+
+  const updateSlots = (
+    inv: Inventory,
+    cs: HTMLElement[],
+    sw: HTMLElement[],
+    nums: HTMLElement[],
+    bgs: HTMLElement[],
+  ): void => {
+    for (let i = 0; i < cs.length; i++) {
+      const cell = cs[i]!;
+      const swatch = sw[i]!;
+      const number = nums[i]!;
+      const badge = bgs[i]!;
+      const slot = inv.slots[i];
+      cell.style.borderColor = i === inv.active ? '#ffffff' : 'rgba(255,255,255,0.35)';
+      cell.style.background = i === inv.active ? 'rgba(255,255,255,0.22)' : 'transparent';
+      if (slot === undefined || slot === null || slot.count <= 0) {
+        swatch.style.display = 'none';
+        number.style.display = 'block';
+        badge.textContent = '';
+        cell.style.filter = 'brightness(0.5)';
+      } else {
+        cell.style.filter = 'brightness(1)';
+        swatch.style.display = 'block';
+        swatch.style.backgroundImage = `url(${blockIcon(slot.type)})`;
+        number.style.display = 'none';
+        badge.textContent = String(slot.count);
+      }
+    }
+  };
 
   return {
     update(inv: Inventory) {
-      for (let i = 0; i < cells.length; i++) {
-        const cell = cells[i]!;
-        const swatch = swatches[i]!;
-        const number = numbers[i]!;
-        const badge = badges[i]!;
-        const slot = inv.slots[i];
-        cell.style.borderColor = i === inv.active ? '#ffffff' : 'rgba(255,255,255,0.35)';
-        cell.style.background = i === inv.active ? 'rgba(255,255,255,0.22)' : 'transparent';
-        if (slot === undefined || slot === null || slot.count <= 0) {
-          swatch.style.display = 'none';
-          number.style.display = 'block';
-          badge.textContent = '';
-          // Slot kosong = gelap (no item).
-          cell.style.filter = 'brightness(0.5)';
-        } else {
-          cell.style.filter = 'brightness(1)';
-          swatch.style.display = 'block';
-          swatch.style.backgroundImage = `url(${blockIcon(slot.type)})`;
-          number.style.display = 'none';
-          badge.textContent = String(slot.count);
-        }
-      }
+      updateSlots(inv, cells, swatches, numbers, badges);
+      updateSlots(inv, panelCells, panelSwatches, panelNumbers, panelBadges);
       const active = inv.slots[inv.active];
-      label.textContent = active === undefined || active === null || active.count <= 0 ? 'Slot kosong' : (BLOCK_NAMES[active.type] ?? 'Unknown');
+      label.textContent =
+        active === undefined || active === null || active.count <= 0
+          ? 'Slot kosong'
+          : (BLOCK_NAMES[active.type] ?? 'Unknown');
     },
     dispose() {
       root.remove();
       label.remove();
+      panel.remove();
+      handle.remove();
     },
   };
 }

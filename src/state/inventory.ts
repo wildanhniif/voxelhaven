@@ -1,6 +1,6 @@
 import type { VoxelType } from '../world/voxel';
 
-export const HOTBAR_SIZE = 9;
+export const HOTBAR_SIZE = 8;
 export const MAX_STACK = 64;
 
 /** Slot berisi stack blok; null = kosong. */
@@ -21,7 +21,7 @@ export const HAND_SLOT = 0;
 export function createInventory(): Inventory {
   const type = (t: VoxelType): ItemStack => ({ type: t, count: MAX_STACK });
   return {
-    slots: [null, type(1), type(2), type(3), null, null, null, null, null],
+    slots: [null, type(1), type(2), type(3), null, null, null, null],
     active: 1,
   };
 }

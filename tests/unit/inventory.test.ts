@@ -34,6 +34,6 @@ describe('inventory', () => {
       { type: 2, count: 64 },
       { type: 3, count: 64 },
     ]);
-    expect(inv.slots.slice(4)).toEqual([null, null, null, null, null]);
+    expect(inv.slots.slice(4)).toEqual([null, null, null, null]);
   });
 });

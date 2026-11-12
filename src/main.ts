@@ -11,6 +11,7 @@ import {
   addItem,
   removeItem,
   selectSlot,
+  HOTBAR_SIZE,
   type Inventory,
 } from './state/inventory';
 import { breakBlock, placeBlock, type PlayerBounds } from './world/block-edit';
@@ -304,7 +305,7 @@ function boot(worldName: string): void {
       return;
     }
     const index = Number(event.key) - 1;
-    if (Number.isInteger(index) && index >= 0 && index < 9) {
+    if (Number.isInteger(index) && index >= 0 && index < HOTBAR_SIZE) {
       inventory = selectSlot(inventory, index);
     }
   }
