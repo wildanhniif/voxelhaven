@@ -8,8 +8,11 @@ const SENSITIVITY = 0.0022;
 export const TPP_DISTANCE = 4;
 const TPP_STEP = 0.1;
 const TPP_MARGIN = 0.2;
-/** Ambang akumulasi pinch (px) untuk toggle FPP ↔ TPP. */
-const ZOOM_THRESHOLD = 60;
+/** Batas zoom: paling dekat (di bawah ini pindah FPP) dan paling jauh. */
+const MIN_TPP_DIST = 0.5;
+const MAX_TPP_DIST = 10;
+/** Kepekaan pinch: px delta → perubahan jarak kamera (blok). */
+const ZOOM_SPEED = 0.015;
 
 export type CameraMode = 'FPP' | 'TPP' | 'TPP_FRONT';
 
@@ -46,10 +49,12 @@ export interface FpsCameraHandle {
   /** Putar kamera dari delta px layar; touch drag memakai ini. */
   applyLook(dx: number, dy: number): void;
   /**
-   * Pinch-zoom: geser antara FPP dan TPP berdasarkan delta px.
-   * deltaPx positif = jari menjauh = kamera menjauh (ke TPP).
+   * Pinch-zoom kontinu: delta px → jarak kamera bertambah/berkurang
+   * bertahap. Bukan toggle. Jari menjauh = kamera menjauh (zoom out).
    */
   zoomCamera(deltaPx: number): void;
+  /** Jarak kamera TPP saat ini (blok); 0 = FPP. */
+  readonly zoomDistance: number;
   dispose(): void;
 }
 /**
@@ -66,8 +71,8 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
   const ORBIT_MAX_PITCH = MathUtils.degToRad(85);
   let orbitYaw = 0;
   let orbitPitch = 0;
-  // Akumulator pinch-zoom; melewati ambang → toggle FPP ↔ TPP.
-  let zoomAccum = 0;
+  // Jarak kamera TPP saat ini; ≤ MIN_TPP_DIST berarti FPP. Diubah kontinu.
+  let zoomDist = 0;
 
   const onKey = (event: KeyboardEvent): void => {
     if (event.code !== 'F5') return;
@@ -77,6 +82,8 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     mode = mode === 'FPP' ? 'TPP' : mode === 'TPP' ? 'TPP_FRONT' : 'FPP';
     orbitYaw = 0;
     orbitPitch = 0;
+    // Sinkron jarak TPP: masuk TPP pakai default, keluar ke FPP reset 0.
+    zoomDist = mode === 'FPP' ? 0 : TPP_DISTANCE;
     applyRotation();
   };
 
@@ -114,23 +121,19 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
   };
 
   /**
-   * Pinch-zoom: akumulasi delta; ambang ZOOM_THRESHOLD memicu toggle.
+   * Pinch-zoom kontinu: jarak kamera bertambah/berkurang sebanding delta.
+   * Jari menjauh (delta +) = zoom out; jari merapat = zoom in.
+   * Saat jarak ≤ MIN, pindah FPP; begitu > MIN kembali TPP.
    */
   const zoomCamera = (deltaPx: number): void => {
-    zoomAccum += deltaPx;
-    if (zoomAccum > ZOOM_THRESHOLD) {
-      zoomAccum = 0;
-      if (mode === 'FPP') {
-        mode = 'TPP';
-        applyRotation();
-      }
-    } else if (zoomAccum < -ZOOM_THRESHOLD) {
-      zoomAccum = 0;
-      if (mode !== 'FPP') {
-        mode = 'FPP';
-        applyRotation();
-      }
+    zoomDist = MathUtils.clamp(zoomDist + deltaPx * ZOOM_SPEED, 0, MAX_TPP_DIST);
+    const nextMode: CameraMode = zoomDist <= MIN_TPP_DIST ? 'FPP' : 'TPP';
+    if (mode !== nextMode) {
+      mode = nextMode;
+      orbitYaw = 0;
+      orbitPitch = 0;
     }
+    applyRotation();
   };
   const onMouseMove = (event: MouseEvent): void => {
     if (document.pointerLockElement !== domElement) return;
@@ -173,6 +176,9 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
     },
     get mode() {
       return mode;
+    },
+    get zoomDistance() {
+      return zoomDist;
     },
     applyLook,
     zoomCamera,

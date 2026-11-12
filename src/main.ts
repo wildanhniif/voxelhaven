@@ -185,8 +185,10 @@ function boot(worldName: string): void {
         active: inventory.active,
       });
       blockStore.flush();
-      location.search = '';
-      location.reload();
+      // Keluar ke menu: hapus param world lalu muat ulang halaman.
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.location.href = url.toString();
     },
   );
   if (touchControls !== null) {
@@ -300,8 +302,9 @@ function boot(worldName: string): void {
         active: inventory.active,
       });
       blockStore.flush();
-      location.search = '';
-      location.reload();
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.location.href = url.toString();
       return;
     }
     const index = Number(event.key) - 1;
@@ -334,7 +337,7 @@ function boot(worldName: string): void {
         Math.sin(pp),
         -Math.cos(py) * Math.cos(pp),
       ];
-      const dist = tppCameraDistance(eye, [-dir[0], -dir[1], -dir[2]], chunkManager);
+      const dist = tppCameraDistance(eye, [-dir[0], -dir[1], -dir[2]], chunkManager, fpsCamera.zoomDistance);
       camera.position.set(eye[0] - dir[0] * dist, eye[1] - dir[1] * dist, eye[2] - dir[2] * dist);
     }
   }
@@ -435,8 +438,10 @@ const worldFromUrl = urlParams.get('world');
 if (worldFromUrl) {
   boot(worldFromUrl);
 } else {
-  createMainMenu((name) => {
+  const menu = createMainMenu((name) => {
     const trimmed = name.trim();
+    // Sembunyikan menu segera; kalau tidak, overlay tetap nutup game.
+    menu.dispose();
     // Simpan nama ke URL supaya bookmark/share ke world langsung.
     const params = new URLSearchParams({ world: trimmed });
     const url = new URL(window.location.href);

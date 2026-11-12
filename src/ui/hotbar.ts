@@ -83,10 +83,12 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
     root.appendChild(parts.cell);
   }
 
-  // �── Panel inventory (swipe up / tap handle) ────────────────────────
+  // ─── Panel inventory: grid Growtopia-style, bisa di-scroll vertikal ──
+  // Kernel item dimasukkan ke sini (bukan ke hotbar) supaya panel berisi
+  // seluruh 8 slot dan tetap bisa digulir kalau nanti slot bertambah.
   const panel = document.createElement('div');
   panel.style.cssText =
-    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);display:none;flex-wrap:wrap;gap:4px;padding:8px;background:rgba(0,0,0,0.6);border-radius:8px;width:184px;z-index:20;';
+    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);display:none;grid-template-columns:repeat(4,40px);gap:4px;padding:8px;background:rgba(0,0,0,0.7);border-radius:8px;max-height:55vh;overflow-y:auto;z-index:20;';
 
   const panelCells: HTMLElement[] = [];
   const panelSwatches: HTMLElement[] = [];
@@ -101,23 +103,20 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
     panel.appendChild(parts.cell);
   }
 
-  const handle = document.createElement('div');
-  handle.textContent = '▲';
-  handle.style.cssText =
-    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);font:14px monospace;color:rgba(255,255,255,0.8);text-shadow:0 1px 2px #000;cursor:pointer;z-index:20;';
+  // Penanda kecil di bawah panel: swipe up untuk buka, swipe ke bawah untuk tutup.
+  const hint = document.createElement('div');
+  hint.textContent = '∧';
+  hint.style.cssText =
+    'position:fixed;bottom:56px;left:50%;transform:translateX(-50%);font:12px monospace;color:rgba(255,255,255,0.55);text-shadow:0 1px 2px #000;z-index:20;pointer-events:none;';
 
-  let panelOpen = false;
   const setPanelOpen = (open: boolean): void => {
-    panelOpen = open;
-    panel.style.display = open ? 'flex' : 'none';
-    handle.textContent = open ? '▼' : '▲';
+    panel.style.display = open ? 'grid' : 'none';
+    hint.textContent = open ? '∨' : '∧';
   };
-  handle.addEventListener('click', () => setPanelOpen(!panelOpen));
-
   document.body.appendChild(root);
   document.body.appendChild(label);
   document.body.appendChild(panel);
-  document.body.appendChild(handle);
+  document.body.appendChild(hint);
 
   // Swipe up di hotbar → buka panel; swipe down di panel → tutup.
   let touchStartY: number | null = null;
@@ -191,7 +190,7 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
       root.remove();
       label.remove();
       panel.remove();
-      handle.remove();
+      hint.remove();
     },
   };
 }
