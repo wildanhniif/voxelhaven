@@ -24,6 +24,7 @@ export function createTouchControls(
   onAction: (button: number) => void,
   onExit: () => void,
   onRespawn: () => void,
+  onClearWorlds: () => void,
 ): TouchControls | null {
   // Deteksi sederhana: hanya pasang di perangkat dengan sentuhan.
   if (!('ontouchstart' in window)) return null;
@@ -120,6 +121,7 @@ export function createTouchControls(
 
   menuPanel.appendChild(mkMenuAction('Respawn', onRespawn));
   menuPanel.appendChild(mkMenuAction('Keluar', onExit));
+  menuPanel.appendChild(mkMenuAction('Hapus semua world', onClearWorlds));
 
   menuBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();

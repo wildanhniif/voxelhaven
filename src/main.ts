@@ -27,7 +27,7 @@ import {
 } from './world/terrain';
 import { createTouchControls } from './ui/touch-controls';
 import { loadPlayer, savePlayer } from './state/player-save';
-import { recordWorld, worldSeed } from './state/world-manager';
+import { clearAllWorlds, recordWorld, worldSeed } from './state/world-manager';
 import type { VoxelType } from './world/voxel';
 import { createFirstPersonArms } from './player/fpp-arms';
 import { createController, EYE_HEIGHT } from './player/controller';
@@ -201,7 +201,16 @@ function boot(worldName: string): void {
       body.vy = 0;
       body.vz = 0;
     },
-  );
+    () => {
+      // Hapus semua world tersimpan (riwayat, save, edit blok) lalu kembali
+      // ke menu: data lama dunia tidak akan dirender lagi.
+      blockStore.flush();
+      clearAllWorlds();
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.location.href = url.toString();
+    },
+   );
   if (touchControls !== null) {
     touchControls.setZoomHandler((delta) => fpsCamera.zoomCamera(delta));
   }
@@ -385,7 +394,7 @@ function boot(worldName: string): void {
 
   const loop = startLoop(({ elapsed, delta }) => {
     controller.update();
-    updatePhysics(body, delta, chunkManager);
+    updatePhysics(body, delta / 1000, chunkManager);
     resetIfFallenOut(body, spawn);
     applyCameraMode();
 
