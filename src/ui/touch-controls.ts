@@ -36,9 +36,9 @@ function saveSensitivity(mult: number): void {
 }
 
 /**
- * Kontrol sentuh untuk mobile: joystick kiri (gerak), drag area kanan (lihat),
- * pinch zoom (jarak kamera), tombol aksi (tap = place, tahan = break) +
- * jump + keluar. Tidak aktif di desktop (tanpa touch).
+ * Kontrol sentuh untuk mobile: joystick kiri (gerak), drag layar (lihat),
+ * pinch zoom, tombol aksi (tap = place, tahan = break) + jump + menu.
+ * Semua input memakai Pointer Events (satu model, andal di Android).
  */
 export function createTouchControls(
   camera: { applyLook(dx: number, dy: number): void },
@@ -70,47 +70,37 @@ export function createTouchControls(
 
   let zoomHandler: ((deltaPx: number) => void) | null = null;
 
-  const controls: TouchControls = {
-    move: { x: 0, z: 0 },
-    jump: false,
-    dispose() {
-      document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
-      document.removeEventListener('touchcancel', onTouchEnd);
-      container.remove();
-    },
-    setZoomHandler(h) {
-      zoomHandler = h;
-    },
-  };
-
-  // Klasifikasi per jari: jari di atas tombol/joystick tidak ikut look.
-  // Look mendukung beberapa jari sekaligus; pinch aktif hanya saat tepat
-  // dua jari look aktif (Growtopia-style: joystick + look bersamaan).
+  // ── Look + pinch di level document ───────────────────────────────────
+  // Klasifikasi per pointer: pointer di atas tombol/joystick (bertanda
+  // data-tc-btn) tidak ikut look. Look mendukung beberapa jari; pinch
+  // aktif hanya saat tepat dua pointer look aktif (Growtopia-style:
+  // pegang joystick sambil geser kamera).
   const lookPts = new Map<number, { x: number; y: number }>();
   let pinchDist: number | null = null;
 
   const isButton = (el: EventTarget | null): boolean =>
     el instanceof Element && el.closest('[data-tc-btn]') !== null;
 
-  const pinchLen = (e: TouchEvent): number => {
-    const pts = Array.from(e.touches)
-      .filter((t) => lookPts.has(t.identifier))
-      .map((t) => ({ x: t.clientX, y: t.clientY }));
-    return Math.hypot(pts[0]!.x - pts[1]!.x, pts[0]!.y - pts[1]!.y);
+  const pinchLen = (): number => {
+    const pts = Array.from(lookPts.values());
+    if (pts.length < 2) return 0;
+    const [a, b] = [pts[0]!, pts[1]!];
+    return Math.hypot(a.x - b.x, a.y - b.y);
   };
 
-  const onTouchStart = (e: TouchEvent): void => {
-    for (const t of Array.from(e.changedTouches)) {
-      if (isButton(t.target)) continue;
-      lookPts.set(t.identifier, { x: t.clientX, y: t.clientY });
-    }
-    if (lookPts.size === 2) pinchDist = pinchLen(e);
+  const onPointerDown = (e: PointerEvent): void => {
+    if (isButton(e.target)) return;
+    lookPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (lookPts.size === 2) pinchDist = pinchLen();
   };
-  const onTouchMove = (e: TouchEvent): void => {
+
+  const onPointerMove = (e: PointerEvent): void => {
+    const p = lookPts.get(e.pointerId);
+    if (p === undefined) return;
     if (lookPts.size === 2) {
-      const dist = pinchLen(e);
+      p.x = e.clientX;
+      p.y = e.clientY;
+      const dist = pinchLen();
       if (pinchDist !== null && dist !== pinchDist) {
         // Jari merapat = zoom out (menjauh); menjauh = zoom in (mendekat).
         if (zoomHandler !== null) zoomHandler(pinchDist - dist);
@@ -118,25 +108,37 @@ export function createTouchControls(
       }
       return;
     }
-    for (const t of Array.from(e.changedTouches)) {
-      const p = lookPts.get(t.identifier);
-      if (p === undefined) continue;
-      camera.applyLook(t.clientX - p.x, t.clientY - p.y);
-      p.x = t.clientX;
-      p.y = t.clientY;
-    }
+    camera.applyLook(e.clientX - p.x, e.clientY - p.y);
+    p.x = e.clientX;
+    p.y = e.clientY;
   };
-  const onTouchEnd = (e: TouchEvent): void => {
-    for (const t of Array.from(e.changedTouches)) {
-      lookPts.delete(t.identifier);
-    }
-    pinchDist = lookPts.size === 2 ? pinchLen(e) : null;
+
+  const onPointerUp = (e: PointerEvent): void => {
+    lookPts.delete(e.pointerId);
+    pinchDist = null;
   };
-  document.addEventListener('touchstart', onTouchStart, { passive: false });
-  document.addEventListener('touchmove', onTouchMove, { passive: false });
-  document.addEventListener('touchend', onTouchEnd);
-  document.addEventListener('touchcancel', onTouchEnd);
-  // ── Tombol keluar (kanan-atas) ────────────────────────────────────────
+
+  document.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', onPointerUp);
+
+  const controls: TouchControls = {
+    move: { x: 0, z: 0 },
+    jump: false,
+    dispose() {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('pointercancel', onPointerUp);
+      container.remove();
+    },
+    setZoomHandler(h) {
+      zoomHandler = h;
+    },
+  };
+
+  // ── Pabrik tombol bundar ─────────────────────────────────────────────
   const mkBtn = (
     label: string,
     bottom: string,
@@ -181,14 +183,14 @@ export function createTouchControls(
   const menuPanel = document.createElement('div');
   menuPanel.style.cssText =
     `position:absolute;top:${px(80)};right:${px(16)};display:none;flex-direction:column;gap:${px(10)};z-index:30;background:rgba(0,0,0,0.75);border-radius:${px(12)};padding:${px(12)};`;
-  menuPanel.dataset.tcBtn = '';
 
   const mkMenuAction = (text: string, fn: () => void): HTMLDivElement => {
     const el = document.createElement('div');
     el.textContent = text;
     el.style.cssText =
       'padding:10px 18px;font-size:16px;color:white;background:rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;text-align:center;pointer-events:auto;';
-    el.addEventListener('click', () => {
+    el.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
       menuPanel.style.display = 'none';
       fn();
     });
@@ -198,6 +200,7 @@ export function createTouchControls(
   menuPanel.appendChild(mkMenuAction('Respawn', onRespawn));
   menuPanel.appendChild(mkMenuAction('Keluar', onExit));
   menuPanel.appendChild(mkMenuAction('Hapus semua world', onClearWorlds));
+  menuPanel.dataset.tcBtn = '';
 
   // Setting kepekaan look: slider 0.2x..3x, tersimpan di localStorage.
   const sensRow = document.createElement('div');
@@ -225,9 +228,12 @@ export function createTouchControls(
   sensRow.appendChild(sensInput);
   sensRow.appendChild(sensValue);
   menuPanel.appendChild(sensRow);
-  menuBtn.addEventListener('click', () => {
+
+  menuBtn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
     menuPanel.style.display = menuPanel.style.display === 'none' ? 'flex' : 'none';
   });
+  container.appendChild(menuPanel);
 
   // ── Joystick ─────────────────────────────────────────────────────────
   const base = document.createElement('div');
@@ -240,7 +246,7 @@ export function createTouchControls(
   base.style.border = '2px solid rgba(255,255,255,0.5)';
   base.style.background = 'rgba(0,0,0,0.2)';
   base.style.pointerEvents = 'auto';
-  // Joystick menangani drag sendiri; kecualikan dari handler look.
+  base.style.touchAction = 'none';
   base.dataset.tcBtn = '';
   base.style.zIndex = '20';
   const knob = document.createElement('div');
@@ -261,50 +267,41 @@ export function createTouchControls(
   };
 
   let joyId: number | null = null;
-  base.addEventListener('touchstart', (e) => {
-    if (joyId === null) {
-      const t = e.changedTouches[0];
-      if (t) joyId = t.identifier;
-    }
-    e.preventDefault();
+  base.addEventListener('pointerdown', (e) => {
+    if (joyId === null) joyId = e.pointerId;
   });
-  base.addEventListener('touchmove', (e) => {
-    for (const t of Array.from(e.changedTouches)) {
-      if (t.identifier !== joyId) continue;
-      const rect = base.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      let dx = t.clientX - cx;
-      let dy = t.clientY - cy;
-      const len = Math.hypot(dx, dy);
-      const max = JOYSTICK_RADIUS * scale;
-      if (len > max) {
-        dx = (dx / len) * max;
-        dy = (dy / len) * max;
-      }
-      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-      // z negatif = maju; skala sesuai besarnya dorongan.
-      controls.move.x = dx / max;
-      controls.move.z = dy / max;
+  base.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== joyId) return;
+    const rect = base.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let dx = e.clientX - cx;
+    let dy = e.clientY - cy;
+    const len = Math.hypot(dx, dy);
+    const max = JOYSTICK_RADIUS * scale;
+    if (len > max) {
+      dx = (dx / len) * max;
+      dy = (dy / len) * max;
     }
-    e.preventDefault();
+    knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    // z negatif = maju; skala sesuai besarnya dorongan.
+    controls.move.x = dx / max;
+    controls.move.z = dy / max;
   });
-  const joyEnd = (e: TouchEvent): void => {
-    for (const t of Array.from(e.changedTouches)) {
-      if (t.identifier === joyId) {
-        joyId = null;
-        resetJoystick();
-      }
+  const joyEnd = (e: PointerEvent): void => {
+    if (e.pointerId === joyId) {
+      joyId = null;
+      resetJoystick();
     }
   };
-  base.addEventListener('touchend', joyEnd);
-  base.addEventListener('touchcancel', joyEnd);
+  base.addEventListener('pointerup', joyEnd);
+  base.addEventListener('pointercancel', joyEnd);
   container.appendChild(base);
 
   // ── Tombol aksi: tap = place, tahan = break (dengan repeat) ──────────
   const actionBtn = mkBtn('⛏/⬛', px(24), px(24), '');
-  let holdTimer: ReturnType<typeof setTimeout> | null = null;
-  let repeatTimer: ReturnType<typeof setInterval> | null = null;
+  let holdTimer: number | null = null;
+  let repeatTimer: number | null = null;
   let held = false;
 
   const stopAction = (): void => {
@@ -318,23 +315,18 @@ export function createTouchControls(
     }
   };
 
-  actionBtn.addEventListener(
-    'touchstart',
-    (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      held = false;
-      // Tahan lama = break (repeat terus selama ditahan).
-      holdTimer = setTimeout(() => {
-        held = true;
-        onAction(0); // break instan pertama
-        repeatTimer = setInterval(() => onAction(0), REPEAT_MS);
-      }, HOLD_MS);
-    },
-    { passive: false },
-  );
-  const actionEnd = (e: TouchEvent): void => {
-    e.preventDefault();
+  actionBtn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    held = false;
+    // Tahan lama = break (repeat terus selama ditahan).
+    holdTimer = setTimeout(() => {
+      held = true;
+      onAction(0); // break instan pertama
+      repeatTimer = setInterval(() => onAction(0), REPEAT_MS);
+    }, HOLD_MS);
+  });
+  const actionEnd = (e: PointerEvent): void => {
+    e.stopPropagation();
     if (!held) {
       // Tap singkat = place.
       onAction(2);
@@ -342,8 +334,8 @@ export function createTouchControls(
     held = false;
     stopAction();
   };
-  actionBtn.addEventListener('touchend', actionEnd, { passive: false });
-  actionBtn.addEventListener('touchcancel', () => {
+  actionBtn.addEventListener('pointerup', actionEnd);
+  actionBtn.addEventListener('pointercancel', () => {
     held = false;
     stopAction();
   });
@@ -351,9 +343,8 @@ export function createTouchControls(
   // Jump.
   const jumpBtn = mkBtn('⬆', px(110), px(110), '');
   jumpBtn.addEventListener(
-    'touchstart',
+    'pointerdown',
     (e) => {
-      e.preventDefault();
       e.stopPropagation();
       controls.jump = true;
       setTimeout(() => {
@@ -362,7 +353,6 @@ export function createTouchControls(
     },
     { passive: false },
   );
-
 
   return controls;
 }
