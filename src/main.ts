@@ -144,14 +144,16 @@ function boot(worldName: string): void {
     }
     return CHUNK_SIZE;
   }
+  // Titik respawn terpisah dari posisi save: selalu tengah dunia di atas
+  // permukaan. Save hanya menentukan posisi awal, bukan tujuan respawn.
+  const spawn = { x: spawnXZ + 0.5, y: findSpawnY(), z: spawnXZ + 0.5 };
   const saved = loadPlayer(worldName);
-  const savedY = saved !== null && Number.isFinite(saved.y) ? saved.y : findSpawnY();
+  const savedY = saved !== null && Number.isFinite(saved.y) ? saved.y : spawn.y;
   const body = createPlayerBody(
-    saved?.x ?? spawnXZ + 0.5,
+    saved?.x ?? spawn.x,
     savedY,
-    saved?.z ?? spawnXZ + 0.5,
+    saved?.z ?? spawn.z,
   );
-  const spawn = { x: body.x, y: body.y, z: body.z };
 
   // Scratch vector: raycast & highlight tanpa alokasi tiap frame.
   const dirScratch = new THREE.Vector3();
