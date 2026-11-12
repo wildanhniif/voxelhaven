@@ -35,7 +35,7 @@ import { createPlayerModel } from './player/player-model';
 import { createPlayerBody, resetIfFallenOut, updatePhysics } from './player/collision';
 import { raycastVoxel, type Vec3 } from './player/raycast';
 import { createMainMenu } from './ui/main-menu';
-import { WORLD_CENTER } from './world/world-bounds';
+import { WORLD_CENTER, WORLD_SIZE } from './world/world-bounds';
 
 const REACH = 6;
 /** Aksi instan; repeat tiap REPEAT_INTERVAL_MS saat ditahan. */
@@ -335,6 +335,16 @@ function boot(worldName: string): void {
 
   let lastFaceYaw = fpsCamera.yaw;
 
+  /** Tinggi permukaan solid tertinggi di kolom (x, z); 0 kalau kosong. */
+  function groundHeightBelow(x: number, z: number): number {
+    const bx = Math.floor(x);
+    const bz = Math.floor(z);
+    for (let y = CHUNK_SIZE - 1; y >= 0; y--) {
+      if (chunkManager.getBlock([bx, y, bz]) !== 0) return y + 1;
+    }
+    return 0;
+  }
+
   function applyCameraMode(): void {
     const eye = eyePosition();
     camera.position.set(eye[0], eye[1], eye[2]);
@@ -355,7 +365,18 @@ function boot(worldName: string): void {
         -Math.cos(py) * Math.cos(pp),
       ];
       const dist = tppCameraDistance(eye, [-dir[0], -dir[1], -dir[2]], chunkManager, fpsCamera.zoomDistance);
-      camera.position.set(eye[0] - dir[0] * dist, eye[1] - dir[1] * dist, eye[2] - dir[2] * dist);
+      let cx = eye[0] - dir[0] * dist;
+      let cy = eye[1] - dir[1] * dist;
+      let cz = eye[2] - dir[2] * dist;
+      // Jaga kamera tetap di dalam dunia (tidak ke-liat keluar tepi).
+      cx = THREE.MathUtils.clamp(cx, 1, WORLD_SIZE - 1);
+      cz = THREE.MathUtils.clamp(cz, 1, WORLD_SIZE - 1);
+      // Jangan pernah taruh kamera di dalam/di bawah blok: angkat ke atas
+      // permukaan tertinggi di bawah posisi kamera. Kamera di bawah tanah
+      // membuat terrain terlihat "hampa" (face interior tidak digenerate).
+      const below = groundHeightBelow(cx, cz);
+      if (cy < below + 1.5) cy = below + 1.5;
+      camera.position.set(cx, cy, cz);
     }
   }
 

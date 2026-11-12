@@ -25,15 +25,18 @@ function blockIcon(type: number): string {
   return blockIconDataUrl(top, side);
 }
 
-function slotCell(onSlotSelected: (index: number) => void, i: number): {
+function slotCell(
+  onSlotSelected: (index: number) => void,
+  i: number,
+  size = 40,
+): {
   cell: HTMLElement;
   swatch: HTMLElement;
   number: HTMLElement;
   badge: HTMLElement;
 } {
   const cell = document.createElement('div');
-  cell.style.cssText =
-    'width:40px;height:40px;box-sizing:border-box;border:2px solid rgba(255,255,255,0.35);display:flex;align-items:center;justify-content:center;font:12px monospace;color:#fff;cursor:pointer;position:relative;';
+  cell.style.cssText = `width:${size}px;height:${size}px;box-sizing:border-box;border:2px solid rgba(255,255,255,0.35);display:flex;align-items:center;justify-content:center;font:12px monospace;color:#fff;cursor:pointer;position:relative;`;
 
   const number = document.createElement('span');
   number.textContent = String(i + 1);
@@ -88,14 +91,14 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
   // seluruh 8 slot dan tetap bisa digulir kalau nanti slot bertambah.
   const panel = document.createElement('div');
   panel.style.cssText =
-    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);display:none;grid-template-columns:repeat(4,40px);gap:4px;padding:8px;background:rgba(0,0,0,0.7);border-radius:8px;max-height:55vh;overflow-y:auto;z-index:20;';
+    'position:fixed;bottom:66px;left:50%;transform:translateX(-50%);display:none;grid-template-columns:repeat(10,34px);gap:4px;padding:8px;background:rgba(0,0,0,0.7);border-radius:8px;max-height:55vh;overflow-y:auto;z-index:20;';
 
   const panelCells: HTMLElement[] = [];
   const panelSwatches: HTMLElement[] = [];
   const panelNumbers: HTMLElement[] = [];
   const panelBadges: HTMLElement[] = [];
   for (let i = 0; i < 8; i++) {
-    const parts = slotCell(onSlotSelected, i);
+    const parts = slotCell(onSlotSelected, i, 34);
     panelCells.push(parts.cell);
     panelSwatches.push(parts.swatch);
     panelNumbers.push(parts.number);
