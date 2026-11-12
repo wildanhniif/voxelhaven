@@ -75,7 +75,7 @@ export function createFpsCamera(camera: PerspectiveCamera, domElement: HTMLEleme
   // sengaja tidak digenerate).
   const ORBIT_PITCH_MIN = MathUtils.degToRad(-30);
   let orbitYaw = 0;
-  // Jarak kamera TPP saat ini; ≤ MIN_TPP_DIST berarti FPP. Diubah kontinu.
+  let orbitPitch = 0;
   let zoomDist = 0;
 
   const onKey = (event: KeyboardEvent): void => {
