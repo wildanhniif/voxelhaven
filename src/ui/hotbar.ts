@@ -118,7 +118,8 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
   document.body.appendChild(panel);
   document.body.appendChild(hint);
 
-  // Swipe up di hotbar → buka panel; swipe down di panel → tutup.
+  // Gesture drawer: geser hotbar ke atas → panel naik; geser panel turun
+  // atau ketuk area kosong di luar panel → tertutup.
   let touchStartY: number | null = null;
   root.addEventListener(
     'touchstart',
@@ -138,13 +139,29 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
     { passive: true },
   );
   panel.addEventListener(
+    'touchstart',
+    (e) => {
+      touchStartY = e.touches[0]?.clientY ?? null;
+    },
+    { passive: true },
+  );
+  panel.addEventListener(
     'touchend',
     (e) => {
       const endY = e.changedTouches[0]?.clientY ?? null;
       if (endY !== null && touchStartY !== null && endY - touchStartY > 30) setPanelOpen(false);
+      touchStartY = null;
     },
     { passive: true },
   );
+  // Ketuk di luar panel (canvas kosong) menutup drawer.
+  const onDocTouch = (e: TouchEvent): void => {
+    if (panel.style.display === 'none') return;
+    const t = e.target as Node | null;
+    if (t !== null && (panel.contains(t) || root.contains(t))) return;
+    setPanelOpen(false);
+  };
+  document.addEventListener('touchstart', onDocTouch, { passive: true });
 
   const updateSlots = (
     inv: Inventory,
@@ -187,6 +204,7 @@ export function createHotbar(onSlotSelected: (index: number) => void): HotbarHan
           : (BLOCK_NAMES[active.type] ?? 'Unknown');
     },
     dispose() {
+      document.removeEventListener('touchstart', onDocTouch);
       root.remove();
       label.remove();
       panel.remove();

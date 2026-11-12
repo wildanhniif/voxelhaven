@@ -27,7 +27,7 @@ import {
 } from './world/terrain';
 import { createTouchControls } from './ui/touch-controls';
 import { loadPlayer, savePlayer } from './state/player-save';
-import { worldSeed } from './state/world-manager';
+import { recordWorld, worldSeed } from './state/world-manager';
 import type { VoxelType } from './world/voxel';
 import { createFirstPersonArms } from './player/fpp-arms';
 import { createController, EYE_HEIGHT } from './player/controller';
@@ -436,12 +436,14 @@ function boot(worldName: string): void {
 const urlParams = new URLSearchParams(window.location.search);
 const worldFromUrl = urlParams.get('world');
 if (worldFromUrl) {
+  recordWorld(worldFromUrl);
   boot(worldFromUrl);
 } else {
   const menu = createMainMenu((name) => {
     const trimmed = name.trim();
     // Sembunyikan menu segera; kalau tidak, overlay tetap nutup game.
     menu.dispose();
+    recordWorld(trimmed);
     // Simpan nama ke URL supaya bookmark/share ke world langsung.
     const params = new URLSearchParams({ world: trimmed });
     const url = new URL(window.location.href);

@@ -85,6 +85,9 @@ export function createTouchControls(
   };
 
   const exitBtn = mkBtn('⏻', '', '16px', '16px');
+  // lookArea (top 55%) ditambah belakangan di DOM dan menutupi tombol ini
+  // kalau z-index sama; angkat supaya sentuhan sampai ke tombol.
+  exitBtn.style.zIndex = '30';
   exitBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -266,7 +269,8 @@ export function createTouchControls(
         const b = e.touches[1]!;
         const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
         if (pinchDist !== null && dist !== pinchDist) {
-          if (zoomHandler !== null) zoomHandler(dist - pinchDist);
+          // Jari merapat = zoom in (kamera mendekat); menjauh = zoom out.
+          if (zoomHandler !== null) zoomHandler(pinchDist - dist);
           pinchDist = dist;
         }
         return;
