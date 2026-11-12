@@ -65,7 +65,7 @@ export function createTouchControls(
   container.style.pointerEvents = 'none';
   container.style.fontFamily = 'sans-serif';
   container.style.userSelect = 'none';
-  container.style.zIndex = '10';
+  container.style.touchAction = 'none';
   document.body.appendChild(container);
 
   let zoomHandler: ((deltaPx: number) => void) | null = null;
