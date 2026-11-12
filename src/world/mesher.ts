@@ -73,7 +73,9 @@ function solidForCulling(
   z: number,
   getLoaded?: (x: number, y: number, z: number) => VoxelType | null,
 ): boolean {
-  if (y < 0) return true; // dasar world solid supaya face bawah tidak digambar
+  // Dasar dunia (y<0) dianggap udara supaya face bawah blok y=0 ikut
+  // dirender: tanpa ini terrain terlihat tembus dari bawah ("hampa").
+  if (y < 0) return false;
   if (y >= CHUNK_HEIGHT) return false;
   const inside = x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE;
   if (inside) return chunk.data[flatIndex(x, y, z, CHUNK_SIZE)] !== VOXEL_AIR;
