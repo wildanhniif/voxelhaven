@@ -75,40 +75,88 @@ export function createTextureAtlas(): Texture {
 
   const random = mulberry32(0xbeef);
 
-  // Tile 0: grass top (hijau gelap, sedikit bercak terang).
-  paintNoise(ctx, 0, 0, [86, 152, 62], 16, random);
-
-  // Tile 1: grass side: band hijau tipis 2px + 1px ragged, sisanya dirt.
-  // Tipis supaya grass yang ditumpuk tidak terlihat band ganda tebal.
-  paintNoise(ctx, TILE_PX, 0, [134, 96, 60], 14, random, (set) => {
-    for (let py = 0; py < 2; py++) {
-      for (let px = 0; px < TILE_PX; px++) {
-        const d = Math.round((random() - 0.5) * 22);
-        set(px, py, [86 + d, 152 + d, 62 + d]);
-      }
-    }
-    for (let px = 0; px < TILE_PX; px++) {
-      if (random() < 0.5) continue; // tepi bawah bergerigi
-      const d = Math.round((random() - 0.5) * 22);
-      set(px, 2, [86 + d, 152 + d, 62 + d]);
-    }
-  });
-
-  // Tile 2: dirt.
-  paintNoise(ctx, 2 * TILE_PX, 0, [134, 96, 60], 14, random, (set) => {
-    for (let i = 0; i < 10; i++) {
-      const px = Math.floor(random() * TILE_PX);
-      const py = Math.floor(random() * TILE_PX);
-      set(px, py, [104, 72, 44]);
-    }
-  });
-
-  // Tile 3: stone (abu-abu dengan kerikil gelap).
-  paintNoise(ctx, 0, TILE_PX, [128, 128, 132], 12, random, (set) => {
+  // Tile 0: grass top. Layered: base + clump gelap/terang + blade highlight.
+  paintNoise(ctx, 0, 0, [98, 165, 74], 10, random, (set) => {
     for (let i = 0; i < 14; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [104, 104, 110]);
+      const r = random() < 0.5 ? 2 : 3;
+      set(px, py, [78, 138, 58]);
+      if (r > 2) set((px + 1) % TILE_PX, py, [86, 148, 64]);
+    }
+    for (let i = 0; i < 8; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      const py = Math.floor(random() * TILE_PX);
+      set(px, py, [118, 182, 88]); // highlight daun
+    }
+    for (let i = 0; i < 5; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      const py = Math.floor(random() * TILE_PX);
+      set(px, py, [64, 118, 48]); // bayangan antar-clump
+    }
+  });
+
+  // Tile 1: grass side. Band 4px + tepi bergerigi 2-level + akar dot di dirt.
+  paintNoise(ctx, TILE_PX, 0, [138, 100, 62], 12, random, (set) => {
+    for (let py = 0; py < 3; py++) {
+      for (let px = 0; px < TILE_PX; px++) {
+        const d = Math.round((random() - 0.5) * 18);
+        set(px, py, [92 + d, 160 + d, 68 + d]);
+      }
+    }
+    for (let px = 0; px < TILE_PX; px++) {
+      const depth = random() < 0.4 ? 2 : 1; // ragged edge 1-2 px
+      for (let dy = 0; dy < depth; dy++) {
+        const d = Math.round((random() - 0.5) * 18);
+        set(px, 3 + dy, [86 + d, 150 + d, 62 + d]);
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      set(px, 4 + Math.floor(random() * 4), [110, 78, 46]); // tetesan dirt ke band
+    }
+  });
+
+  // Tile 2: dirt. Clump multi-tone + kerikil + highlight top-left.
+  paintNoise(ctx, 2 * TILE_PX, 0, [138, 100, 62], 12, random, (set) => {
+    for (let i = 0; i < 16; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      const py = Math.floor(random() * TILE_PX);
+      set(px, py, [112, 80, 48]); // clump gelap
+    }
+    for (let i = 0; i < 10; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      const py = Math.floor(random() * TILE_PX);
+      set(px, py, [156, 118, 76]); // clump terang
+    }
+    for (let i = 0; i < 4; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      const py = Math.floor(random() * TILE_PX);
+      set(px, py, [128, 132, 140]); // kerikil abu kecil
+    }
+  });
+
+  // Tile 3: stone. Base multi-tone + retakan horizontal + kerikil + highlight.
+  paintNoise(ctx, 0, TILE_PX, [142, 138, 134], 8, random, (set) => {
+    for (let i = 0; i < 3; i++) {
+      // Retakan horizontal: garis 4-6 px dengan tone lebih gelap.
+      const py = 2 + Math.floor(random() * 12);
+      let px = Math.floor(random() * 10);
+      const len = 4 + Math.floor(random() * 3);
+      for (let k = 0; k < len && px + k < TILE_PX; k++) {
+        set(px + k, py, [110, 106, 104]);
+        if (random() < 0.3) set(px + k, py + 1, [120, 116, 114]);
+      }
+    }
+    for (let i = 0; i < 8; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      const py = Math.floor(random() * TILE_PX);
+      set(px, py, [128, 124, 122]); // bercak gelap
+    }
+    for (let i = 0; i < 6; i++) {
+      const px = Math.floor(random() * TILE_PX);
+      const py = Math.floor(random() * TILE_PX);
+      set(px, py, [162, 158, 152]); // highlight batu
     }
   });
   // Tile 4: wood top (cincin tahun cahaya di tengah).
@@ -148,31 +196,13 @@ export function createTextureAtlas(): Texture {
       set(px, py, [92, 150, 70]);
     }
   });
-  // Patch async: begitu PNG Blockbench (128x128) termuat, gambar ke tile
-  // 0-2 (downscale ke 16x16) lalu tandai dirty supaya GPU upload ulang.
-  // Fallback: kalau file PNG tidak ada, tile tetap pakai versi procedural.
-  const patchTiles: readonly [string, number, number][] = [
-    ['grass_top.png', 0, 0],
-    ['grass_side.png', TILE_PX, 0],
-    ['dirt.png', 2 * TILE_PX, 0],
-  ];
-  const baseTexture = new CanvasTexture(canvas);
-  baseTexture.magFilter = NearestFilter;
-  baseTexture.minFilter = NearestFilter;
-  baseTexture.generateMipmaps = false;
-  baseTexture.colorSpace = SRGBColorSpace;
-  baseTexture.needsUpdate = true;
-  if (typeof Image === 'undefined') return baseTexture; // Node env (test)
-  for (const [file, ox, oy] of patchTiles) {
-    const img = new Image();
-    img.onload = (): void => {
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(img, ox, oy, TILE_PX, TILE_PX);
-      baseTexture.needsUpdate = true;
-    };
-    img.src = file;
-  }
-  return baseTexture;
+  const texture = new CanvasTexture(canvas);
+  texture.magFilter = NearestFilter;
+  texture.minFilter = NearestFilter;
+  texture.generateMipmaps = false;
+  texture.colorSpace = SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 /**
