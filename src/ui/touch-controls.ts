@@ -104,8 +104,17 @@ export function createTouchControls(
     // kalau pointer benar-benar hilang, size < 2 otomatis melumpuhkan
     // cabang pinch di bawah.
     syncLivePointers();
+    // Toast overlay Android (kursor/aksesibilitas) menelan pointerup:
+    // pointer masih tercatat tapi tombolnya sudah lepas (buttons===0).
+    // Begitu terdeteksi lewat move berikutnya, buang.
     const p = lookPts.get(e.pointerId);
     if (p === undefined) return;
+    if ((e.buttons & 1) === 0) {
+      lookPts.delete(e.pointerId);
+      livePointers.delete(e.pointerId);
+      pinchDist = null;
+      return;
+    }
     if (lookPts.size === 2) {
       if (pinchDist === null) pinchDist = pinchLen();
       p.x = e.clientX;
