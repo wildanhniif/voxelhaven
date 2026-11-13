@@ -16,14 +16,14 @@ export interface PlayerSave {
 
 export function savePlayer(worldName: string, state: PlayerSave): void {
   try {
-    localStorage.setItem(`${KEY_BASE}:${worldName}`, JSON.stringify(state));
+    localStorage.setItem(`${KEY_BASE}:${worldName.trim().toLowerCase()}`, JSON.stringify(state));
   } catch {
     // Quota penuh/disk penuh: abaikan, game tetap jalan di sesi ini.
   }
 }
 
 export function loadPlayer(worldName: string): PlayerSave | null {
-  const raw = localStorage.getItem(`${KEY_BASE}:${worldName}`);
+  const raw = localStorage.getItem(`${KEY_BASE}:${worldName.trim().toLowerCase()}`);
   if (raw === null) return null;
   try {
     const parsed: unknown = JSON.parse(raw);

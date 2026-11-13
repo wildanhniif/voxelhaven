@@ -1,4 +1,4 @@
-import { getRecentWorlds } from '../state/world-manager';
+import { getRecentWorlds, validateWorldName } from '../state/world-manager';
 
 /**
  * Main menu overlay: input nama world + tombol Play.
@@ -80,12 +80,13 @@ export function createMainMenu(onPlay: (worldName: string) => void): { dispose()
   overlay.appendChild(error);
 
   const submit = (): void => {
-    const name = input.value.trim();
-    if (name.length === 0) {
-      error.textContent = 'Nama world tidak boleh kosong';
+    const msg = validateWorldName(input.value);
+    if (msg !== null) {
+      error.textContent = msg;
       return;
     }
-    onPlay(name);
+    // Sudah dinormalisasi (lowercase) oleh validateWorldName.
+    onPlay(input.value.trim().toLowerCase());
   };
   button.addEventListener('click', submit);
   input.addEventListener('keydown', (e) => {

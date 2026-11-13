@@ -5,17 +5,40 @@
 
 /** Hash FNV-1a 32-bit; deterministik lintas platform, cukup untuk seed. */
 export function worldSeed(name: string): number {
+  // Normalisasi di sini: seed konsisten meski nama dipanggil dari URL
+  // atau menu (menu juga menormalisasi, ini defense-in-depth).
+  const n = name.trim().toLowerCase();
   let h = 0x811c9dc5;
-  for (let i = 0; i < name.length; i++) {
-    h ^= name.charCodeAt(i);
+  for (let i = 0; i < n.length; i++) {
+    h ^= n.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
   return h >>> 0;
 }
 
-/** Nama world dipakai apa adanya sebagai suffix key localStorage. */
+/**
+ * Normalisasi nama world: trim + lowercase. Aturan validasi terpisah
+ * (validateWorldName) dipakai di menu sebelum onPlay.
+ */
+export function normalizeWorldName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/**
+ * Validasi nama world: tidak kosong, tidak diawali angka, tanpa spasi,
+ * hanya huruf/angka/underscore. Mengembalikan pesan error atau null.
+ */
+export function validateWorldName(name: string): string | null {
+  const n = normalizeWorldName(name);
+  if (n.length === 0) return 'Nama world tidak boleh kosong';
+  if (/\d/.test(n[0] ?? '')) return 'Nama world tidak boleh diawali angka';
+  if (!/^\w+$/.test(n)) return 'Nama world hanya boleh huruf, angka, dan _ (tanpa spasi)';
+  return null;
+}
+
+/** Key storage memakai nama ternormalisasi (lowercase) agar konsisten. */
 export function storageKey(worldName: string): string {
-  return `voxel-sandbox:edits:v1:${worldName}`;
+  return `voxel-sandbox:edits:v1:${worldName.trim().toLowerCase()}`;
 }
 
 /** Key riwayat: daftar nama world yang pernah dikunjungi (urutan terbalik). */
