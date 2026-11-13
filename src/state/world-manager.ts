@@ -26,13 +26,13 @@ export function normalizeWorldName(name: string): string {
 
 /**
  * Validasi nama world: tidak kosong, tidak diawali angka, tanpa spasi,
- * hanya huruf/angka/underscore. Mengembalikan pesan error atau null.
+ * hanya huruf dan angka (underscore juga ditolak). Error atau null.
  */
 export function validateWorldName(name: string): string | null {
   const n = normalizeWorldName(name);
   if (n.length === 0) return 'Nama world tidak boleh kosong';
   if (/\d/.test(n[0] ?? '')) return 'Nama world tidak boleh diawali angka';
-  if (!/^\w+$/.test(n)) return 'Nama world hanya boleh huruf, angka, dan _ (tanpa spasi)';
+  if (!/^[a-z0-9]+$/.test(n)) return 'Nama world hanya boleh huruf dan angka (tanpa spasi/simbol)';
   return null;
 }
 
