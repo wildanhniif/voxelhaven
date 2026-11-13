@@ -75,118 +75,107 @@ export function createTextureAtlas(): Texture {
 
   const random = mulberry32(0xbeef);
 
-  // Tile 0: grass top. Saturasi tinggi: base vivid + clump gelap kontras +
-  // blade highlight neon + dot kuning-hijau. 5 lapis warna.
-  paintNoise(ctx, 0, 0, [104, 178, 72], 14, random, (set) => {
-    for (let i = 0; i < 20; i++) {
+  // Tile 0: grass top. Satu hue (hijau sederhana), variasi lightness saja.
+  // Base vivid (104,178,72), shadow ke teal-green yang sama hue-nya.
+  paintNoise(ctx, 0, 0, [104, 178, 72], 18, random, (set) => {
+    // Clump gelap: hue sama, lightness turun 35%.
+    for (let i = 0; i < 16; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [66, 132, 46]); // clump gelap kontras
-      if (random() < 0.5) set((px + 1) % TILE_PX, py, [82, 152, 54]);
+      set(px, py, [72, 128, 52]);
+      if (random() < 0.4) set((px + 1) % TILE_PX, py, [88, 152, 62]);
     }
-    for (let i = 0; i < 12; i++) {
+    // Highlight: hue sama, lightness naik 25%.
+    for (let i = 0; i < 10; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [140, 208, 92]); // highlight neon
+      set(px, py, [132, 208, 94]);
     }
+    // Bayangan dalam: tetap hue hijau, tidak turun ke teal.
     for (let i = 0; i < 6; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [186, 224, 108]); // dot kuning-hijau (rumput muda)
-    }
-    for (let i = 0; i < 8; i++) {
-      const px = Math.floor(random() * TILE_PX);
-      const py = Math.floor(random() * TILE_PX);
-      set(px, py, [48, 104, 38]); // bayangan dalam
+      set(px, py, [58, 106, 44]);
     }
   });
 
-  // Tile 1: grass side. Band 4px tebal + ragged 3-level + tetes dirt +
-  // highlight vertikal di band.
-  paintNoise(ctx, TILE_PX, 0, [146, 106, 66], 14, random, (set) => {
+  // Tile 1: grass side. Hue coklat konsisten di seluruh dirt, band hijau
+  // satu hue dengan grass top. Lightness variasi saja.
+  paintNoise(ctx, TILE_PX, 0, [148, 108, 68], 14, random, (set) => {
     for (let py = 0; py < 4; py++) {
       for (let px = 0; px < TILE_PX; px++) {
-        const d = Math.round((random() - 0.5) * 24);
-        set(px, py, [88 + d, 168 + d, 56 + d]);
+        const d = Math.round((random() - 0.5) * 20);
+        set(px, py, [88 + d, 172 + d, 58 + d]);
       }
     }
     for (let px = 0; px < TILE_PX; px++) {
       const depth = random() < 0.3 ? 3 : random() < 0.5 ? 2 : 1;
       for (let dy = 0; dy < depth; dy++) {
-        const d = Math.round((random() - 0.5) * 24);
-        set(px, 4 + dy, [80 + d, 156 + d, 50 + d]);
+        const d = Math.round((random() - 0.5) * 20);
+        set(px, 4 + dy, [82 + d, 158 + d, 54 + d]);
       }
     }
-    for (let i = 0; i < 10; i++) {
+    // Tetes dirt: hue sama dengan base dirt (bukan hue lain).
+    for (let i = 0; i < 8; i++) {
       const px = Math.floor(random() * TILE_PX);
-      set(px, 5 + Math.floor(random() * 5), [116, 82, 50]); // tetes dirt
+      set(px, 5 + Math.floor(random() * 5), [124, 90, 56]);
     }
+    // Highlight band: hue sama, lightness naik.
     for (let i = 0; i < 6; i++) {
       const px = Math.floor(random() * TILE_PX);
-      set(px, Math.floor(random() * 3), [136, 208, 92]); // highlight band
+      set(px, Math.floor(random() * 3), [128, 204, 90]);
     }
   });
 
-  // Tile 2: dirt. Kontras kuat: clump gelap besar + terang + kerikil +
-  // dot merah-bata. 5 tone.
-  paintNoise(ctx, 2 * TILE_PX, 0, [148, 106, 66], 14, random, (set) => {
-    for (let i = 0; i < 20; i++) {
+  // Tile 2: dirt. Hue coklat tunggal, variasi lightness 5 tingkat,
+  // kerikil tetap warm-grey (hue dekat coklat, bukan abu dingin).
+  paintNoise(ctx, 2 * TILE_PX, 0, [148, 108, 68], 14, random, (set) => {
+    for (let i = 0; i < 18; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [116, 80, 46]);
-      if (random() < 0.4) set((px + 1) % TILE_PX, py, [124, 88, 52]);
+      set(px, py, [118, 84, 52]);
+      if (random() < 0.4) set((px + 1) % TILE_PX, py, [132, 94, 58]);
     }
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 12; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [172, 132, 86]); // clump terang
+      set(px, py, [172, 130, 86]);
     }
     for (let i = 0; i < 6; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [140, 92, 66]); // dot merah-bata
+      set(px, py, [148, 102, 72]); // warm-grey kerikil, hue dekat base
     }
     for (let i = 0; i < 5; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [136, 140, 148]); // kerikil abu
-    }
-    for (let i = 0; i < 4; i++) {
-      const px = Math.floor(random() * TILE_PX);
-      const py = Math.floor(random() * TILE_PX);
-      set(px, py, [92, 62, 38]); // pori gelap
+      set(px, py, [96, 66, 42]);
     }
   });
 
-  // Tile 3: stone. Kontras kuat: retakan tebal bercabang + blotch gelap
-  // besar + highlight + dot mineral.
-  paintNoise(ctx, 0, TILE_PX, [150, 148, 146], 10, random, (set) => {
+  // Tile 3: stone. Hue abu tunggal (neutral), variasi lightness saja.
+  // Retakan tetap abu gelap, highlight abu terang, tanpa hue lain.
+  paintNoise(ctx, 0, TILE_PX, [148, 146, 142], 10, random, (set) => {
     for (let i = 0; i < 4; i++) {
-      // Retakan bercabang: garis horizontal + tetesan vertikal.
       const py = 2 + Math.floor(random() * 12);
       const px = Math.floor(random() * 9);
       const len = 5 + Math.floor(random() * 4);
       for (let k = 0; k < len && px + k < TILE_PX; k++) {
-        set(px + k, py, [104, 100, 100]);
-        if (random() < 0.4) set(px + k, py + 1, [118, 114, 112]);
-        if (random() < 0.2) set(px + k, py - 1, [128, 124, 122]);
+        set(px + k, py, [110, 108, 106]);
+        if (random() < 0.4) set(px + k, py + 1, [124, 122, 120]);
+        if (random() < 0.2) set(px + k, py - 1, [134, 132, 130]);
       }
     }
     for (let i = 0; i < 10; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [116, 112, 112]); // blotch gelap
-      if (random() < 0.5) set((px + 1) % TILE_PX, py, [126, 122, 120]);
+      set(px, py, [122, 120, 118]);
+      if (random() < 0.5) set((px + 1) % TILE_PX, py, [132, 130, 128]);
     }
     for (let i = 0; i < 10; i++) {
       const px = Math.floor(random() * TILE_PX);
       const py = Math.floor(random() * TILE_PX);
-      set(px, py, [176, 174, 168]); // highlight
-    }
-    for (let i = 0; i < 5; i++) {
-      const px = Math.floor(random() * TILE_PX);
-      const py = Math.floor(random() * TILE_PX);
-      set(px, py, [178, 148, 108]); // dot mineral coklat (fleck)
+      set(px, py, [172, 170, 166]);
     }
   });
   // Tile 4: wood top (cincin tahun cahaya di tengah).
