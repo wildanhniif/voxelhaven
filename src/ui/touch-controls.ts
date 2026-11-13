@@ -142,18 +142,30 @@ export function createTouchControls(
     }
   };
   const releaseAll = (): void => {
-    // App ke-blur/hidden (notifikasi, multitask): browser kadang tidak
-    // kirim pointerup. Reset total supaya tidak ada pointer hantu.
+    // App ke-blur/hidden (notifikasi, multitask) atau toggle menu:
+    // browser kadang tidak kirim pointerup. Reset total supaya tidak
+    // ada pointer hantu — termasuk joyId, kalau tidak joystick macet
+    // ke arah terakhir (control move tidak pernah nol).
     lookPts.clear();
     livePointers.clear();
     pinchDist = null;
+    joyId = null;
+    resetJoystick();
   };
 
+  // pointermove di document: jari di atas tombol/joystick TIDAK masuk
+  // lookPts (pointerdown-nya difilter), tapi pointermove-nya tetap
+  // lewat di sini. syncLivePointers membuang pointer yang up/cancel-nya
+  // tertelan (mis. panel menu muncul, notifikasi Android, swipe sistem).
   document.addEventListener('pointerdown', onPointerDown);
   document.addEventListener('pointermove', onPointerMove);
   document.addEventListener('pointerup', onPointerUp);
   document.addEventListener('pointercancel', onPointerUp);
   window.addEventListener('blur', releaseAll);
+  // visibilitychange WAJIB: buka menu / panel sistem sering memicu
+  // pointercancel tanpa pointerup; tanpa reset, pointer hantu menumpuk
+  // dan lookPts.size===2 membekukan kamera.
+  document.addEventListener('visibilitychange', releaseAll);
 
   const controls: TouchControls = {
     move: { x: 0, z: 0 },
@@ -265,8 +277,27 @@ export function createTouchControls(
 
   menuBtn.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
-    menuPanel.style.display = menuPanel.style.display === 'none' ? 'flex' : 'none';
+    const akanBuka = menuPanel.style.display === 'none';
+    menuPanel.style.display = akanBuka ? 'flex' : 'none';
+    // Reset total pointer: buka/tutup panel sering menelan pointerup
+    // (jari masih di atas tombol saat panel berubah), sehingga pointer
+    // hantu tertinggal di lookPts dan kamera beku + joystick macet.
+    releaseAll();
   });
+
+  // Klik/tap di luar panel menutup panel, sama seperti tombol ☰.
+  // Dipasang di document dengan fase capture agar tidak bisa di-stop
+  // oleh elemen lain. Panel terbuka = bukan klik di dalam panel.
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (menuPanel.style.display === 'none') return;
+      if (e.target instanceof Element && e.target.closest('[data-tc-btn]') !== null) return;
+      menuPanel.style.display = 'none';
+      releaseAll();
+    },
+    true,
+  );
   container.appendChild(menuPanel);
 
   // ── Joystick ─────────────────────────────────────────────────────────
