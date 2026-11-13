@@ -148,13 +148,31 @@ export function createTextureAtlas(): Texture {
       set(px, py, [92, 150, 70]);
     }
   });
-  const texture = new CanvasTexture(canvas);
-  texture.magFilter = NearestFilter;
-  texture.minFilter = NearestFilter;
-  texture.generateMipmaps = false;
-  texture.colorSpace = SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
+  // Patch async: begitu PNG Blockbench (128x128) termuat, gambar ke tile
+  // 0-2 (downscale ke 16x16) lalu tandai dirty supaya GPU upload ulang.
+  // Fallback: kalau file PNG tidak ada, tile tetap pakai versi procedural.
+  const patchTiles: readonly [string, number, number][] = [
+    ['grass_top.png', 0, 0],
+    ['grass_side.png', TILE_PX, 0],
+    ['dirt.png', 2 * TILE_PX, 0],
+  ];
+  const baseTexture = new CanvasTexture(canvas);
+  baseTexture.magFilter = NearestFilter;
+  baseTexture.minFilter = NearestFilter;
+  baseTexture.generateMipmaps = false;
+  baseTexture.colorSpace = SRGBColorSpace;
+  baseTexture.needsUpdate = true;
+  if (typeof Image === 'undefined') return baseTexture; // Node env (test)
+  for (const [file, ox, oy] of patchTiles) {
+    const img = new Image();
+    img.onload = (): void => {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, ox, oy, TILE_PX, TILE_PX);
+      baseTexture.needsUpdate = true;
+    };
+    img.src = file;
+  }
+  return baseTexture;
 }
 
 /**
