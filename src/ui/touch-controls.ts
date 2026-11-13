@@ -76,6 +76,9 @@ export function createTouchControls(
   // aktif hanya saat tepat dua pointer look aktif (Growtopia-style:
   // pegang joystick sambil geser kamera).
   const lookPts = new Map<number, { x: number; y: number }>();
+  // Semua pointer yang sedang aktif di layar (termasuk di atas tombol):
+  // pembanding untuk membuang pointer hantu dari lookPts.
+  const livePointers = new Set<number>();
   let pinchDist: number | null = null;
 
   const isButton = (el: EventTarget | null): boolean =>
@@ -89,12 +92,15 @@ export function createTouchControls(
   };
 
   const onPointerDown = (e: PointerEvent): void => {
+    livePointers.add(e.pointerId);
     if (isButton(e.target)) return;
     lookPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (lookPts.size === 2) pinchDist = pinchLen();
   };
 
   const onPointerMove = (e: PointerEvent): void => {
+    // Buang pointer hantu (up-nya tertelan) sebelum proses move.
+    syncLivePointers();
     const p = lookPts.get(e.pointerId);
     if (p === undefined) return;
     if (lookPts.size === 2) {
@@ -114,7 +120,28 @@ export function createTouchControls(
   };
 
   const onPointerUp = (e: PointerEvent): void => {
+    // Selalu hapus pointer dari daftar look, termasuk pointer yang
+    // menimpa tombol/joystick (pointerdown-nya tidak tercatat, tapi
+    // delete id yang tidak ada tidak berefek). Tanpa ini, pointer
+    // "hantu" menumpuk dan lookPts.size===2 membekukan kamera.
     lookPts.delete(e.pointerId);
+    livePointers.delete(e.pointerId);
+    pinchDist = null;
+  };
+
+  const syncLivePointers = (): void => {
+    // Bersihkan pointer yang sudah tidak ada (mis. palm reject, sistem
+    // menelan event up). pointerId lebih besar saat coba lagi.
+    for (const id of lookPts.keys()) {
+      if (!livePointers.has(id)) lookPts.delete(id);
+    }
+    pinchDist = null;
+  };
+  const releaseAll = (): void => {
+    // App ke-blur/hidden (notifikasi, multitask): browser kadang tidak
+    // kirim pointerup. Reset total supaya tidak ada pointer hantu.
+    lookPts.clear();
+    livePointers.clear();
     pinchDist = null;
   };
 
@@ -122,6 +149,7 @@ export function createTouchControls(
   document.addEventListener('pointermove', onPointerMove);
   document.addEventListener('pointerup', onPointerUp);
   document.addEventListener('pointercancel', onPointerUp);
+  window.addEventListener('blur', releaseAll);
 
   const controls: TouchControls = {
     move: { x: 0, z: 0 },
@@ -131,6 +159,8 @@ export function createTouchControls(
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerup', onPointerUp);
       document.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('blur', releaseAll);
+      document.removeEventListener('visibilitychange', releaseAll);
       container.remove();
     },
     setZoomHandler(h) {
@@ -270,7 +300,10 @@ export function createTouchControls(
   base.addEventListener('pointerdown', (e) => {
     if (joyId === null) joyId = e.pointerId;
   });
-  base.addEventListener('pointermove', (e) => {
+  window.addEventListener('pointermove', (e) => {
+    // Listen di window: jari sering keluar dari area base saat menggerakkan
+    // knob; jika hanya listen di base, gerakan terpotong dan joystick
+    // terasa "nyangkut" ke arah terakhir.
     if (e.pointerId !== joyId) return;
     const rect = base.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
@@ -294,8 +327,9 @@ export function createTouchControls(
       resetJoystick();
     }
   };
-  base.addEventListener('pointerup', joyEnd);
-  base.addEventListener('pointercancel', joyEnd);
+  // Release di window: jari bisa lepas di luar base.
+  window.addEventListener('pointerup', joyEnd);
+  window.addEventListener('pointercancel', joyEnd);
   container.appendChild(base);
 
   // ── Tombol aksi: tap = place, tahan = break (dengan repeat) ──────────
