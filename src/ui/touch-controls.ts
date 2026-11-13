@@ -100,15 +100,19 @@ export function createTouchControls(
 
   const onPointerMove = (e: PointerEvent): void => {
     // Buang pointer hantu (up-nya tertelan) sebelum proses move.
+    // pinchDist TIDAK di-reset di sini supaya pinch aktif tetap jalan;
+    // kalau pointer benar-benar hilang, size < 2 otomatis melumpuhkan
+    // cabang pinch di bawah.
     syncLivePointers();
     const p = lookPts.get(e.pointerId);
     if (p === undefined) return;
     if (lookPts.size === 2) {
+      if (pinchDist === null) pinchDist = pinchLen();
       p.x = e.clientX;
       p.y = e.clientY;
       const dist = pinchLen();
-      if (pinchDist !== null && dist !== pinchDist) {
-        // Jari merapat = zoom out (menjauh); menjauh = zoom in (mendekat).
+      // Jari merapat = zoom out (menjauh); menjauh = zoom in (mendekat).
+      if (dist !== pinchDist) {
         if (zoomHandler !== null) zoomHandler(pinchDist - dist);
         pinchDist = dist;
       }
@@ -131,11 +135,11 @@ export function createTouchControls(
 
   const syncLivePointers = (): void => {
     // Bersihkan pointer yang sudah tidak ada (mis. palm reject, sistem
-    // menelan event up). pointerId lebih besar saat coba lagi.
+    // menelan event up). Tidak menyentuh pinchDist: hanya meaningful
+    // saat size===2, dan onPointerUp/releaseAll sudah me-reset-nya.
     for (const id of lookPts.keys()) {
       if (!livePointers.has(id)) lookPts.delete(id);
     }
-    pinchDist = null;
   };
   const releaseAll = (): void => {
     // App ke-blur/hidden (notifikasi, multitask): browser kadang tidak
